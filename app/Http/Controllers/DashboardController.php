@@ -1,0 +1,278 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\ViolationReport;
+
+class DashboardController extends Controller
+{
+    /**
+     * Redirect to the dedicated dashboard according to user's role.
+     */
+    public function index()
+    {
+        $user = Auth::user();
+
+        if ($user->isKemahasiswaan()) {
+            return redirect()->route('kemahasiswaan.dashboard');
+        } elseif ($user->isMahasiswa()) {
+            return redirect()->route('mahasiswa.dashboard');
+        } elseif ($user->isKajur()) {
+            return redirect()->route('kajur.dashboard');
+        } elseif ($user->isDekan()) {
+            return redirect()->route('dekan.dashboard');
+        } elseif ($user->isWarek()) {
+            return redirect()->route('warek.dashboard');
+        }
+
+        abort(403, 'Role tidak dikenali.');
+    }
+
+    /**
+     * 1. Dashboard Mahasiswa (Portal Pelapor)
+     * Route: /mahasiswa/dashboard
+     */
+    public function mahasiswa()
+    {
+        $user = Auth::user();
+        $myReports = ViolationReport::where('reporter_id', $user->id)->get();
+
+        $totalSubmitted = $myReports->count();
+        $pending = $myReports->whereIn('status', ['pending', 'dilaporkan'])->count();
+        $confirmed = $myReports->whereIn('status', ['dikonfirmasi', 'diverifikasi_kaprodi', 'diteruskan_kemahasiswaan'])->count();
+        $rejected = $myReports->where('status', 'ditolak')->count();
+        $inProgress = $myReports->whereIn('status', ['diproses', 'sedang_diproses'])->count();
+        $completed = $myReports->whereIn('status', ['selesai', 'sanksi_ditetapkan'])->count();
+
+        $recentReports = ViolationReport::where('reporter_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('dashboard.mahasiswa', compact(
+            'totalSubmitted',
+            'pending',
+            'confirmed',
+            'rejected',
+            'inProgress',
+            'completed',
+            'recentReports'
+        ));
+    }
+
+    /**
+     * 2. Dashboard Kemahasiswaan (Super Admin & Global Analyst)
+     * Route: /kemahasiswaan/dashboard
+     */
+    public function kemahasiswaan(Request $request)
+    {
+        $query = ViolationReport::query();
+
+        // Academic Year & Semester Filters
+        $academicYear = $request->get('academic_year');
+        $semester = $request->get('semester');
+
+        if ($academicYear) {
+            $query->where('academic_year', $academicYear);
+        }
+        if ($semester) {
+            $query->where('semester', $semester);
+        }
+
+        $allReports = $query->get();
+
+        $totalReports = $allReports->count();
+        $pendingCount = $allReports->whereIn('status', ['pending', 'dilaporkan'])->count();
+        $confirmedCount = $allReports->whereIn('status', ['dikonfirmasi', 'diverifikasi_kaprodi', 'diteruskan_kemahasiswaan'])->count();
+        $rejectedCount = $allReports->where('status', 'ditolak')->count();
+        $inProgressCount = $allReports->whereIn('status', ['diproses', 'sedang_diproses'])->count();
+        $completedCount = $allReports->whereIn('status', ['selesai', 'sanksi_ditetapkan'])->count();
+
+        // Grafik 1: Perbandingan Total Pelanggaran antar-Jurusan (Bar Chart)
+        $deptCounts = [];
+        $departments = array_keys(ReportController::$departments);
+        foreach ($departments as $dept) {
+            $deptCounts[$dept] = $allReports->filter(function($r) use ($dept) {
+                return ($r->target_department === $dept) || ($r->reported_department === $dept);
+            })->count();
+        }
+        arsort($deptCounts);
+
+        // Grafik 2: Jenis/Kategori Pelanggaran (Pie/Donut Chart)
+        $severityCounts = [
+            'Ringan' => $allReports->where('severity', 'Ringan')->count(),
+            'Sedang' => $allReports->where('severity', 'Sedang')->count(),
+            'Berat' => $allReports->where('severity', 'Berat')->count(),
+            'Suspek' => $allReports->where('severity', 'Suspek')->count(),
+        ];
+
+        // Laporan menunggu verifikasi untuk inbox cepat
+        $pendingReports = ViolationReport::whereIn('status', ['pending', 'dilaporkan'])
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('dashboard.kemahasiswaan', compact(
+            'totalReports',
+            'pendingCount',
+            'confirmedCount',
+            'rejectedCount',
+            'inProgressCount',
+            'completedCount',
+            'deptCounts',
+            'severityCounts',
+            'pendingReports',
+            'academicYear',
+            'semester'
+        ));
+    }
+
+    /**
+     * 3. Dashboard Ketua Jurusan (Tindak Lanjut & Sanksi Prodi)
+     * Route: /kajur/dashboard
+     */
+    public function kajur()
+    {
+        $user = Auth::user();
+        $myDept = $user->department ?? 'Teknik Informatika';
+
+        $kajurReports = ViolationReport::where(function ($q) use ($myDept) {
+            $q->where('target_department', $myDept)
+              ->orWhere('reported_department', $myDept);
+        })->whereIn('status', ['dikonfirmasi', 'diproses', 'selesai'])->get();
+
+        $totalKajurReports = $kajurReports->count();
+        $needsActionCount = $kajurReports->where('status', 'dikonfirmasi')->count();
+        $inProcessCount = $kajurReports->where('status', 'diproses')->count();
+        $completedCount = $kajurReports->where('status', 'selesai')->count();
+
+        // Grafik Khusus Jurusan: Jenis/Kategori dominan di jurusan ini saja
+        $severityCounts = [
+            'Ringan' => $kajurReports->where('severity', 'Ringan')->count(),
+            'Sedang' => $kajurReports->where('severity', 'Sedang')->count(),
+            'Berat' => $kajurReports->where('severity', 'Berat')->count(),
+            'Suspek' => $kajurReports->where('severity', 'Suspek')->count(),
+        ];
+
+        // Daftar Kasus Jurusan Saya
+        $recentCases = ViolationReport::where(function ($q) use ($myDept) {
+            $q->where('target_department', $myDept)
+              ->orWhere('reported_department', $myDept);
+        })->whereIn('status', ['dikonfirmasi', 'diproses', 'selesai'])
+          ->orderBy('created_at', 'desc')
+          ->take(5)
+          ->get();
+
+        return view('dashboard.kajur', compact(
+            'myDept',
+            'totalKajurReports',
+            'needsActionCount',
+            'inProcessCount',
+            'completedCount',
+            'severityCounts',
+            'recentCases'
+        ));
+    }
+
+    /**
+     * 4. Dashboard Dekan (Monitoring Fakultas - Read Only)
+     * Route: /dekan/dashboard
+     */
+    public function dekan()
+    {
+        $user = Auth::user();
+        $myFaculty = $user->faculty ?? 'Fakultas Ilmu Komputer';
+        $facultyDepts = array_keys(array_filter(ReportController::$departments, fn($f) => $f === $myFaculty));
+
+        $facultyReports = ViolationReport::where(function ($q) use ($facultyDepts) {
+            $q->whereIn('target_department', $facultyDepts)
+              ->orWhereIn('reported_department', $facultyDepts);
+        })->get();
+
+        $totalFacultyReports = $facultyReports->count();
+        $completedCount = $facultyReports->where('status', 'selesai')->count();
+        $inProgressCount = $facultyReports->whereIn('status', ['dikonfirmasi', 'diproses'])->count();
+        $pendingCount = $facultyReports->where('status', 'pending')->count();
+
+        // Grafik Pelanggaran Fakultas (Perbandingan antar Jurusan di fakultasnya)
+        $deptStats = [];
+        foreach ($facultyDepts as $dept) {
+            $deptStats[$dept] = $facultyReports->filter(function($r) use ($dept) {
+                return ($r->target_department === $dept) || ($r->reported_department === $dept);
+            })->count();
+        }
+
+        // Grafik Jenis Pelanggaran Fakultas
+        $severityCounts = [
+            'Ringan' => $facultyReports->where('severity', 'Ringan')->count(),
+            'Sedang' => $facultyReports->where('severity', 'Sedang')->count(),
+            'Berat' => $facultyReports->where('severity', 'Berat')->count(),
+            'Suspek' => $facultyReports->where('severity', 'Suspek')->count(),
+        ];
+
+        return view('dashboard.dekan', compact(
+            'myFaculty',
+            'facultyDepts',
+            'totalFacultyReports',
+            'completedCount',
+            'inProgressCount',
+            'pendingCount',
+            'deptStats',
+            'severityCounts'
+        ));
+    }
+
+    /**
+     * 5. Dashboard Wakil Rektor (Monitoring Universitas - Read Only)
+     * Route: /warek/dashboard
+     */
+    public function warek()
+    {
+        $allReports = ViolationReport::all();
+        $totalReports = $allReports->count();
+        $completedCount = $allReports->where('status', 'selesai')->count();
+        $inProgressCount = $allReports->whereIn('status', ['dikonfirmasi', 'diproses'])->count();
+        $resolutionRate = $totalReports > 0 ? round(($completedCount / $totalReports) * 100, 1) : 0;
+
+        // Grafik Ranking Pelanggaran Seluruh Universitas
+        $deptCounts = [];
+        $departments = array_keys(ReportController::$departments);
+        foreach ($departments as $dept) {
+            $deptCounts[$dept] = $allReports->filter(function($r) use ($dept) {
+                return ($r->target_department === $dept) || ($r->reported_department === $dept);
+            })->count();
+        }
+        arsort($deptCounts);
+
+        // Grafik Tren Pelanggaran per Bulan (6 bulan terakhir)
+        $monthlyTrend = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $monthKey = $month->format('M Y');
+            $count = $allReports->filter(function ($r) use ($month) {
+                return $r->created_at && $r->created_at->format('Y-m') === $month->format('Y-m');
+            })->count();
+            $monthlyTrend[$monthKey] = $count;
+        }
+
+        // Komposisi Kategori Pelanggaran
+        $severityCounts = [
+            'Ringan' => $allReports->where('severity', 'Ringan')->count(),
+            'Sedang' => $allReports->where('severity', 'Sedang')->count(),
+            'Berat' => $allReports->where('severity', 'Berat')->count(),
+            'Suspek' => $allReports->where('severity', 'Suspek')->count(),
+        ];
+
+        return view('dashboard.warek', compact(
+            'totalReports',
+            'completedCount',
+            'inProgressCount',
+            'resolutionRate',
+            'deptCounts',
+            'monthlyTrend',
+            'severityCounts'
+        ));
+    }
+}
