@@ -12,6 +12,22 @@ use App\Models\ReportEvidence;
 
 class ReportController extends Controller
 {
+    // List of standard faculties and their departments
+    public static array $faculties = [
+        'Fakultas Ilmu Komputer' => [
+            'Teknik Informatika',
+            'Sistem Informasi',
+        ],
+        'Fakultas Teknik' => [
+            'Teknik Elektro',
+            'Teknik Sipil',
+        ],
+        'Fakultas Ekonomi & Bisnis' => [
+            'Manajemen',
+            'Akuntansi',
+        ],
+    ];
+
     // List of standard departments and faculty groupings
     public static array $departments = [
         'Teknik Informatika' => 'Fakultas Ilmu Komputer',
@@ -22,7 +38,7 @@ class ReportController extends Controller
         'Akuntansi' => 'Fakultas Ekonomi & Bisnis',
     ];
 
-    public static array $severities = ['Ringan', 'Sedang', 'Berat', 'Suspek'];
+    public static array $severities = ['Ringan', 'Sedang', 'Berat'];
 
     public static array $sanctionOptions = [
         'Teguran Lisan',
@@ -38,12 +54,16 @@ class ReportController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+
+        // Mahasiswa tidak memiliki akses ke riwayat laporan (hanya pelaporan)
+        if ($user->isMahasiswa()) {
+            return redirect()->route('mahasiswa.dashboard');
+        }
+
         $query = ViolationReport::query()->with(['student', 'reporter', 'verifier', 'handler']);
 
         // RBAC filtering
-        if ($user->isMahasiswa()) {
-            $query->where('reporter_id', $user->id);
-        } elseif ($user->isKajur()) {
+        if ($user->isKajur()) {
             $dept = $user->department;
             $query->where(function ($q) use ($dept) {
                 $q->where('target_department', $dept)
@@ -94,9 +114,10 @@ class ReportController extends Controller
             abort(403, 'Hanya Mahasiswa dan Kemahasiswaan yang dapat membuat laporan.');
         }
 
+        $faculties = self::$faculties;
         $departments = array_keys(self::$departments);
         $severities = self::$severities;
-        return view('reports.create', compact('departments', 'severities'));
+        return view('reports.create', compact('faculties', 'departments', 'severities'));
     }
 
     public function store(Request $request)
@@ -104,11 +125,12 @@ class ReportController extends Controller
         $request->validate([
             'reported_name' => 'required|string|max:150',
             'reported_nim' => 'required|string|max:50',
+            'reported_faculty' => 'nullable|string|max:150',
             'reported_department' => 'required|string|max:150',
             'incident_date' => 'required|date',
             'incident_time' => 'nullable',
             'incident_location' => 'required|string|max:255',
-            'severity' => 'required|string|in:Ringan,Sedang,Berat,Suspek',
+            'severity' => 'required|string|in:Ringan,Sedang,Berat',
             'chronology' => 'required|string',
             'evidence' => 'nullable|file|mimes:pdf,jpg,jpeg,png,mp4|max:10240', // 10MB
         ]);
@@ -118,9 +140,11 @@ class ReportController extends Controller
             'Ringan' => 20,
             'Sedang' => 50,
             'Berat' => 75,
-            'Suspek' => 0,
             default => 25,
         };
+
+        // Determine faculty if not explicitly submitted
+        $faculty = $request->reported_faculty ?: (self::$departments[$request->reported_department] ?? null);
 
         // Link student if found by NIM
         $matchedStudent = Student::where('nim', trim($request->reported_nim))->first();
@@ -138,6 +162,7 @@ class ReportController extends Controller
             'student_id' => $matchedStudent?->id,
             'reported_name' => $request->reported_name,
             'reported_nim' => $request->reported_nim,
+            'reported_faculty' => $faculty,
             'reported_department' => $request->reported_department,
             'target_department' => $request->reported_department,
             'reporter_id' => Auth::id(),
@@ -148,7 +173,7 @@ class ReportController extends Controller
             'incident_location' => $request->incident_location,
             'chronology' => $request->chronology,
             'status' => 'pending', // Workflow Step 3: Data Terkirim, masuk ke Inbox Verifikasi Kemahasiswaan
-            'academic_year' => '2026/2027',
+            'academic_year' => \App\Models\AcademicYear::getActiveYear(),
             'semester' => 'Ganjil',
             'evidence_path' => $evidencePath,
             'evidence_name' => $evidenceName,
@@ -163,6 +188,10 @@ class ReportController extends Controller
             ]);
         }
 
+        if (Auth::user()->isMahasiswa()) {
+            return redirect()->route('mahasiswa.dashboard')->with('success', 'Laporan Anda berhasil dikirim ke Bagian Kemahasiswaan secara aman dan terlindungi (Anonim). Terima kasih atas partisipasi Anda.');
+        }
+
         return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan dan sedang menunggu verifikasi Bagian Kemahasiswaan.');
     }
 
@@ -172,8 +201,8 @@ class ReportController extends Controller
         $user = Auth::user();
 
         // RBAC Access Check
-        if ($user->isMahasiswa() && $report->reporter_id !== $user->id) {
-            abort(403, 'Anda tidak memiliki hak akses untuk melihat laporan ini.');
+        if ($user->isMahasiswa()) {
+            return redirect()->route('mahasiswa.dashboard')->with('error', 'Mahasiswa hanya memiliki hak akses untuk melakukan pelaporan pelanggaran.');
         }
         if ($user->isKajur()) {
             if ($report->target_department !== $user->department && $report->reported_department !== $user->department) {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ViolationReport;
+use App\Models\AcademicYear;
 
 class DashboardController extends Controller
 {
@@ -36,30 +37,11 @@ class DashboardController extends Controller
      */
     public function mahasiswa()
     {
-        $user = Auth::user();
-        $myReports = ViolationReport::where('reporter_id', $user->id)->get();
+        $faculties = ReportController::$faculties;
+        $departments = array_keys(ReportController::$departments);
+        $severities = ReportController::$severities;
 
-        $totalSubmitted = $myReports->count();
-        $pending = $myReports->whereIn('status', ['pending', 'dilaporkan'])->count();
-        $confirmed = $myReports->whereIn('status', ['dikonfirmasi', 'diverifikasi_kaprodi', 'diteruskan_kemahasiswaan'])->count();
-        $rejected = $myReports->where('status', 'ditolak')->count();
-        $inProgress = $myReports->whereIn('status', ['diproses', 'sedang_diproses'])->count();
-        $completed = $myReports->whereIn('status', ['selesai', 'sanksi_ditetapkan'])->count();
-
-        $recentReports = ViolationReport::where('reporter_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get();
-
-        return view('dashboard.mahasiswa', compact(
-            'totalSubmitted',
-            'pending',
-            'confirmed',
-            'rejected',
-            'inProgress',
-            'completed',
-            'recentReports'
-        ));
+        return view('dashboard.mahasiswa', compact('faculties', 'departments', 'severities'));
     }
 
     /**
@@ -68,21 +50,38 @@ class DashboardController extends Controller
      */
     public function kemahasiswaan(Request $request)
     {
-        $query = ViolationReport::query();
-
-        // Academic Year & Semester Filters
-        $academicYear = $request->get('academic_year');
-        $semester = $request->get('semester');
-
-        if ($academicYear) {
-            $query->where('academic_year', $academicYear);
-        }
-        if ($semester) {
-            $query->where('semester', $semester);
+        // 1. Academic Years setup
+        $academicYears = AcademicYear::orderBy('year', 'desc')->get();
+        if ($academicYears->isEmpty()) {
+            AcademicYear::create(['year' => '2026/2027', 'is_active' => true]);
+            $academicYears = AcademicYear::orderBy('year', 'desc')->get();
         }
 
-        $allReports = $query->get();
+        $activeAcademicYear = AcademicYear::getActiveYear();
 
+        // If academic_year is provided in URL, use it; otherwise default to active academic year (2026/2027)
+        $selectedAcademicYear = $request->has('academic_year') ? $request->get('academic_year') : $activeAcademicYear;
+
+        // Suggested next academic year for the add-modal
+        $latestYear = $academicYears->first()?->year ?? '2026/2027';
+        if (preg_match('/^(\d{4})\/(\d{4})$/', $latestYear, $matches)) {
+            $y1 = (int)$matches[1] + 1;
+            $y2 = (int)$matches[2] + 1;
+            $suggestedNextYear = "{$y1}/{$y2}";
+        } else {
+            $suggestedNextYear = '2027/2028';
+        }
+
+        // 2. Query reports filtered by selected academic year
+        $query = ViolationReport::query()->with(['student', 'reporter']);
+
+        if ($selectedAcademicYear && $selectedAcademicYear !== 'all') {
+            $query->where('academic_year', $selectedAcademicYear);
+        }
+
+        $allReports = $query->orderBy('created_at', 'desc')->get();
+
+        // 3. Overall KPI Metrics
         $totalReports = $allReports->count();
         $pendingCount = $allReports->whereIn('status', ['pending', 'dilaporkan'])->count();
         $confirmedCount = $allReports->whereIn('status', ['dikonfirmasi', 'diverifikasi_kaprodi', 'diteruskan_kemahasiswaan'])->count();
@@ -90,43 +89,102 @@ class DashboardController extends Controller
         $inProgressCount = $allReports->whereIn('status', ['diproses', 'sedang_diproses'])->count();
         $completedCount = $allReports->whereIn('status', ['selesai', 'sanksi_ditetapkan'])->count();
 
-        // Grafik 1: Perbandingan Total Pelanggaran antar-Jurusan (Bar Chart)
-        $deptCounts = [];
-        $departments = array_keys(ReportController::$departments);
-        foreach ($departments as $dept) {
-            $deptCounts[$dept] = $allReports->filter(function($r) use ($dept) {
-                return ($r->target_department === $dept) || ($r->reported_department === $dept);
-            })->count();
-        }
-        arsort($deptCounts);
+        // 4. Analisis Berbasis FAKULTAS (Peringkat Pelanggaran Antar-Fakultas)
+        $facultiesList = ReportController::$faculties;
+        $facultyCounts = [];
+        $facultyStats = [];
 
-        // Grafik 2: Jenis/Kategori Pelanggaran (Pie/Donut Chart)
+        foreach ($facultiesList as $facName => $depts) {
+            $facReports = $allReports->filter(function ($r) use ($facName, $depts) {
+                if ($r->reported_faculty === $facName) {
+                    return true;
+                }
+                $rDept = $r->reported_department ?: $r->target_department;
+                return in_array($rDept, $depts);
+            });
+
+            $facultyCounts[$facName] = $facReports->count();
+
+            // Department breakdown within this faculty
+            $deptBreakdown = [];
+            foreach ($depts as $deptName) {
+                $deptBreakdown[$deptName] = $facReports->filter(function ($r) use ($deptName) {
+                    return ($r->reported_department === $deptName) || ($r->target_department === $deptName);
+                })->count();
+            }
+
+            $facultyStats[$facName] = [
+                'name' => $facName,
+                'departments' => $depts,
+                'total' => $facReports->count(),
+                'ringan' => $facReports->where('severity', 'Ringan')->count(),
+                'sedang' => $facReports->where('severity', 'Sedang')->count(),
+                'berat' => $facReports->where('severity', 'Berat')->count(),
+                'pending' => $facReports->whereIn('status', ['pending', 'dilaporkan'])->count(),
+                'diproses' => $facReports->whereIn('status', ['diproses', 'sedang_diproses', 'dikonfirmasi'])->count(),
+                'selesai' => $facReports->whereIn('status', ['selesai', 'sanksi_ditetapkan'])->count(),
+                'deptBreakdown' => $deptBreakdown,
+                'reports' => $facReports->values(),
+            ];
+        }
+
+        // Urutkan peringkat fakultas dari yang paling sering melakukan pelanggaran (Descending)
+        arsort($facultyCounts);
+
+        // 5. Severity distribution (Ringan, Sedang, Berat)
         $severityCounts = [
             'Ringan' => $allReports->where('severity', 'Ringan')->count(),
             'Sedang' => $allReports->where('severity', 'Sedang')->count(),
             'Berat' => $allReports->where('severity', 'Berat')->count(),
-            'Suspek' => $allReports->where('severity', 'Suspek')->count(),
         ];
 
-        // Laporan menunggu verifikasi untuk inbox cepat
+        // 6. Inbox Cepat Laporan Menunggu Verifikasi
         $pendingReports = ViolationReport::whereIn('status', ['pending', 'dilaporkan'])
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
 
         return view('dashboard.kemahasiswaan', compact(
+            'academicYears',
+            'activeAcademicYear',
+            'selectedAcademicYear',
+            'suggestedNextYear',
             'totalReports',
             'pendingCount',
             'confirmedCount',
             'rejectedCount',
             'inProgressCount',
             'completedCount',
-            'deptCounts',
+            'facultyCounts',
+            'facultyStats',
             'severityCounts',
-            'pendingReports',
-            'academicYear',
-            'semester'
+            'pendingReports'
         ));
+    }
+
+    /**
+     * Simpan tahun akademik baru dan otomatis jadikan tahun akademik aktif untuk laporan selanjutnya.
+     */
+    public function storeAcademicYear(Request $request)
+    {
+        $request->validate([
+            'year' => [
+                'required',
+                'string',
+                'max:20',
+                'regex:/^\d{4}\/\d{4}$/',
+            ],
+        ], [
+            'year.required' => 'Tahun akademik wajib diisi.',
+            'year.regex' => 'Format tahun akademik harus YYYY/YYYY (contoh: 2027/2028).',
+        ]);
+
+        $year = trim($request->year);
+
+        AcademicYear::setActive($year);
+
+        return redirect()->route('kemahasiswaan.dashboard', ['academic_year' => $year])
+            ->with('success', "Tahun Akademik {$year} berhasil ditambahkan dan ditetapkan sebagai tahun akademik aktif. Semua laporan baru otomatis masuk ke tahun akademik ini.");
     }
 
     /**

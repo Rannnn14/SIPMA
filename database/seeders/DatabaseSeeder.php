@@ -57,7 +57,7 @@ class DatabaseSeeder extends Seeder
         // 3. Seed Users for 5 Roles (RBAC)
         // Mahasiswa (Pelapor)
         $mahasiswaUser = DB::table('users')->insertGetId([
-            'name' => 'Ahmad Fauzi (Mahasiswa)',
+            'name' => 'Ahmad Fauzi',
             'email' => 'mahasiswa@sipma.test',
             'nim' => '2024001',
             'username' => '2024001',
@@ -72,7 +72,7 @@ class DatabaseSeeder extends Seeder
 
         // Kemahasiswaan (Verifikator & Global Analyst - Super Admin)
         $kemahasiswaanUser = DB::table('users')->insertGetId([
-            'name' => 'Dra. Siti Rahma, M.Pd. (Kemahasiswaan)',
+            'name' => 'Dra. Siti Rahma, M.Pd.',
             'email' => 'kemahasiswaan@sipma.test',
             'nim' => null,
             'username' => 'kemahasiswaan',

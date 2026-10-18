@@ -86,6 +86,15 @@ class ViolationReport extends Model
         return $this->reported_nim ?: ($this->student?->nim ?? '-');
     }
 
+    public function getFacultyAttribute(): string
+    {
+        if (!empty($this->reported_faculty)) {
+            return $this->reported_faculty;
+        }
+        $dept = $this->reported_department ?: $this->target_department;
+        return \App\Http\Controllers\ReportController::$departments[$dept] ?? 'Fakultas Lainnya';
+    }
+
     public function getDepartmentNameAttribute(): string
     {
         return $this->target_department ?: ($this->reported_department ?: ($this->student?->study_program ?? '-'));

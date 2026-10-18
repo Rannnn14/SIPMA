@@ -19,8 +19,8 @@
                     <div class="d-flex align-items-center mb-2">
                         <i class="fas fa-shield-alt text-info fa-2x mr-3"></i>
                         <div>
-                            <h6 class="font-weight-bold text-info mb-1">Panduan Pengajuan Laporan & Jaminan Perlindungan Identitas</h6>
-                            <p class="small text-muted mb-0">Identitas pelapor dilindungi penuh oleh sistem SIPMA dan disamarkan (Anonymous) di hadapan Ketua Jurusan, Dekan, maupun Wakil Rektor.</p>
+                            <h6 class="font-weight-bold text-info mb-1">Panduan Pengajuan Laporan Mahasiswa</h6>
+                            <p class="small text-muted mb-0">Setiap laporan yang diajukan akan diverifikasi secara teliti oleh Bagian Kemahasiswaan sesuai prosedur tata tertib kampus.</p>
                         </div>
                     </div>
                     <hr class="my-2">
@@ -73,21 +73,35 @@
                 <i class="fas fa-user-edit mr-1 text-primary"></i> 1. Identitas Terlapor (Input Manual)
             </h6>
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-6 mb-3">
                     <div class="form-group">
                         <label class="font-weight-bold text-dark small">Nama Terlapor <span class="text-danger">*</span></label>
                         <input type="text" name="reported_name" value="{{ old('reported_name') }}" required class="form-control" placeholder="Contoh: Budi Santoso">
                         <small class="text-muted">Ketik nama lengkap mahasiswa yang dilaporkan.</small>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6 mb-3">
                     <div class="form-group">
                         <label class="font-weight-bold text-dark small">NIM Terlapor <span class="text-danger">*</span></label>
                         <input type="text" name="reported_nim" value="{{ old('reported_nim') }}" required class="form-control" placeholder="Contoh: 2024002">
                         <small class="text-muted">Ketik Nomor Induk Mahasiswa jika diketahui.</small>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="font-weight-bold text-dark small">Fakultas Terlapor <span class="text-danger">*</span></label>
+                        <select name="reported_faculty" required class="form-control">
+                            <option value="">-- Pilih Fakultas --</option>
+                            @foreach($faculties as $facName => $deptList)
+                                <option value="{{ $facName }}" {{ old('reported_faculty') === $facName ? 'selected' : '' }}>
+                                    {{ $facName }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Pilih fakultas mahasiswa terlapor.</small>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
                     <div class="form-group">
                         <label class="font-weight-bold text-dark small">Jurusan / Program Studi Terlapor <span class="text-danger">*</span></label>
                         <select name="reported_department" required class="form-control">

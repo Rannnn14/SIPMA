@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:kemahasiswaan')->group(function () {
         Route::get('/kemahasiswaan/dashboard', [DashboardController::class, 'kemahasiswaan'])->name('kemahasiswaan.dashboard');
+        Route::post('/kemahasiswaan/academic-years', [DashboardController::class, 'storeAcademicYear'])->name('kemahasiswaan.academic-years.store');
     });
 
     Route::middleware('role:kajur')->group(function () {

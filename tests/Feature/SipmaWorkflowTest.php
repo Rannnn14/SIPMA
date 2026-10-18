@@ -109,12 +109,26 @@ class SipmaWorkflowTest extends TestCase
             'chronology' => 'Mahasiswa merusak fasilitas kabel praktikum saat asistensi.',
         ]);
 
-        $response->assertRedirect(route('reports.index'));
+        $response->assertRedirect(route('mahasiswa.dashboard'));
         $this->assertDatabaseHas('violation_reports', [
             'reported_name' => 'Doni Kusuma',
             'status' => 'pending',
             'severity' => 'Sedang',
         ]);
+    }
+
+    public function test_mahasiswa_cannot_view_report_history(): void
+    {
+        $mahasiswa = User::where('role', 'mahasiswa')->first();
+        $this->actingAs($mahasiswa);
+
+        // Accessing index should redirect to mahasiswa dashboard
+        $response = $this->get(route('reports.index'));
+        $response->assertRedirect(route('mahasiswa.dashboard'));
+
+        // Accessing report show should redirect to mahasiswa dashboard
+        $detailResponse = $this->get(route('reports.show', 1));
+        $detailResponse->assertRedirect(route('mahasiswa.dashboard'));
     }
 
     public function test_kemahasiswaan_can_correct_and_approve_report(): void

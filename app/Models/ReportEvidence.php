@@ -6,5 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReportEvidence extends Model
 {
-    //
+    protected $table = 'report_evidences';
+
+    protected $guarded = [];
+
+    public function violationReport()
+    {
+        return $this->belongsTo(ViolationReport::class);
+    }
 }

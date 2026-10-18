@@ -489,6 +489,137 @@ body {
   to { transform: translateX(0); opacity: 1; }
 }
 
+/* ==========================================================================
+   Comprehensive Responsive UI/UX Across All Screens
+   ========================================================================== */
+
+/* Touch-friendly scrolling for tables */
+.table-responsive {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  position: relative;
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+/* Ensure table content has appropriate min-widths on smaller screens */
+.table-responsive table {
+  min-width: 680px;
+}
+
+/* Mobile & Tablet Responsive Breakpoints */
+@media (max-width: 767.98px) {
+  /* Layout & Spacing */
+  .container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Topbar */
+  .topbar {
+    height: 3.75rem;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Headings */
+  h1.h3, .h3 {
+    font-size: 1.35rem !important;
+  }
+
+  /* Cards */
+  .card-header {
+    padding: 0.85rem 1rem !important;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  /* Forms & Filters */
+  .form-inline .form-group {
+    width: 100% !important;
+    margin-right: 0 !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .form-inline select, 
+  .form-inline input {
+    width: 100% !important;
+  }
+
+  /* Button Groups & Action Buttons */
+  .d-sm-flex .btn,
+  .d-flex.flex-wrap .btn {
+    margin-bottom: 0.35rem;
+  }
+
+  /* Stat cards */
+  .stat-card-row .col-6 {
+    margin-bottom: 1rem;
+  }
+
+  /* Timeline Audit */
+  .timeline {
+    padding-left: 1rem;
+  }
+  .timeline-dot {
+    left: -1rem;
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Toast Notifications */
+  #toastContainer {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  .sipma-toast {
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  /* Modals */
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+}
+
+/* Extra Small Phones (< 576px) */
+@media (max-width: 575.98px) {
+  body {
+    font-size: 0.9rem;
+  }
+  
+  /* Touch target sizes */
+  .btn {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  .form-control {
+    font-size: 16px; /* Prevents iOS auto-zoom */
+  }
+
+  /* Sidebar Drawer Mobile Styling */
+  .sidebar.toggled {
+    width: 100% !important;
+    max-width: 250px;
+    z-index: 1050;
+  }
+}
+
 /* Print Styles */
 @media print {
   body { background: #ffffff !important; color: #000 !important; }

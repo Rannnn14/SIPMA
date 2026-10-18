@@ -51,6 +51,11 @@ class User extends Authenticatable
         return $this->role === 'warek';
     }
 
+    public function getCleanNameAttribute(): string
+    {
+        return trim(preg_replace('/\s*\([^)]*\)$/', '', $this->name ?? ''));
+    }
+
     public function getRoleTitleAttribute(): string
     {
         return match ($this->role) {
