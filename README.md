@@ -7,6 +7,59 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Menjalankan SIPMA dengan MySQL
+
+### 1. Siapkan MySQL
+
+Jalankan MySQL melalui XAMPP/Laragon atau pastikan layanan MySQL lokal aktif. Buat database `sipma_db` dengan salah satu cara berikut:
+
+- phpMyAdmin: buka tab **SQL**, jalankan isi file `database/create_sipma_db.sql`.
+- MySQL command line: jalankan `mysql -u root -p < database/create_sipma_db.sql` (hapus `-p` jika akun root tidak memakai password).
+
+### 2. Atur koneksi aplikasi
+
+Salin `.env.example` menjadi `.env` jika `.env` belum ada. Isi bagian database sesuai MySQL lokal:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sipma_db
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Sesuaikan username dan password dengan instalasi MySQL. Pastikan PHP mengaktifkan ekstensi `pdo_mysql`.
+
+### 3. Buat tabel dan akun contoh
+
+Di folder proyek, jalankan:
+
+```bash
+composer install
+php artisan key:generate
+php artisan config:clear
+php artisan migrate
+php artisan db:seed
+php artisan storage:link
+php artisan serve
+```
+
+Buka alamat yang dicetak oleh `php artisan serve`. Migrasi membuat tabel MySQL aplikasi. Seeder menambahkan data contoh untuk alur mahasiswa, Kemahasiswaan, Kajur, dan Warek. **Seeder mengosongkan data SIPMA yang sudah ada pada tabel pengguna, laporan, dan master pelanggaran.** Jalankan `php artisan db:seed` hanya pada database baru/kosong. Untuk database yang sudah berisi data, cukup jalankan `php artisan migrate`.
+
+### 4. Coba alur kerja
+
+Login akun demo yang dibuat seeder (kata sandi awal semua akun: `password`):
+
+- Mahasiswa: username/NIM `2024001`
+- Kemahasiswaan: username `kemahasiswaan`
+- Ketua Jurusan Informatika: username `kajur_if`
+- Warek: username `warek`
+
+Kirim laporan dari akun mahasiswa dengan bukti lampiran. Login Kemahasiswaan untuk memeriksa inbox, koreksi bila perlu, lalu setujui dan teruskan laporan. Laporan akan berstatus terverifikasi di akun Kajur jurusan terkait; Kajur dapat mengisi tindak lanjut. Dashboard Warek menampilkan rekap dan grafik berdasarkan laporan dalam database.
+
+Jika koneksi gagal, pastikan layanan MySQL hidup, database dan kredensial di `.env` benar, lalu jalankan `php artisan config:clear`.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

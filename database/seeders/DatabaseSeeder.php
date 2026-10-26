@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use App\Http\Controllers\ReportController;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,7 +14,7 @@ class DatabaseSeeder extends Seeder
     {
         $now = Carbon::now();
 
-        // 1. Truncate/Clean existing demo data
+        // 1. Truncate / Clean existing demo data
         if (DB::getDriverName() === 'mysql') {
             DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         } elseif (DB::getDriverName() === 'sqlite') {
@@ -38,11 +39,12 @@ class DatabaseSeeder extends Seeder
 
         // 2. Seed Master Students
         $studentsData = [
-            ['nim' => '2024001', 'name' => 'Ahmad Fauzi', 'study_program' => 'Teknik Informatika', 'entry_year' => 2024, 'phone' => '081234567890'],
-            ['nim' => '2024002', 'name' => 'Budi Santoso', 'study_program' => 'Teknik Informatika', 'entry_year' => 2024, 'phone' => '081234567891'],
-            ['nim' => '2024003', 'name' => 'Citra Lestari', 'study_program' => 'Sistem Informasi', 'entry_year' => 2023, 'phone' => '081234567892'],
-            ['nim' => '2024004', 'name' => 'Doni Kusuma', 'study_program' => 'Teknik Elektro', 'entry_year' => 2024, 'phone' => '081234567893'],
-            ['nim' => '2024005', 'name' => 'Eka Prasetya', 'study_program' => 'Manajemen', 'entry_year' => 2023, 'phone' => '081234567894'],
+            ['nim' => '2024001', 'name' => 'Ahmad Fauzi', 'study_program' => 'Informatika', 'entry_year' => 2024, 'phone' => '081234567890'],
+            ['nim' => '2024002', 'name' => 'Budi Santoso', 'study_program' => 'Pendidikan Agama Islam', 'entry_year' => 2024, 'phone' => '081234567891'],
+            ['nim' => '2024003', 'name' => 'Citra Lestari', 'study_program' => 'Perbankan Syariah', 'entry_year' => 2023, 'phone' => '081234567892'],
+            ['nim' => '2024004', 'name' => 'Doni Kusuma', 'study_program' => 'Hukum Keluarga Islam', 'entry_year' => 2024, 'phone' => '081234567893'],
+            ['nim' => '2024005', 'name' => 'Eka Prasetya', 'study_program' => 'Komunikasi dan Penyiaran Islam', 'entry_year' => 2023, 'phone' => '081234567894'],
+            ['nim' => '2024006', 'name' => 'Fatimah Zahra', 'study_program' => 'Ilmu Al-Qur\'an dan Tafsir', 'entry_year' => 2024, 'phone' => '081234567895'],
         ];
 
         $studentIds = [];
@@ -54,8 +56,8 @@ class DatabaseSeeder extends Seeder
             $studentIds[$st['nim']] = $id;
         }
 
-        // 3. Seed Users for 5 Roles (RBAC)
-        // Mahasiswa (Pelapor)
+        // 3. Seed Users
+        // A. Mahasiswa (Pelapor)
         $mahasiswaUser = DB::table('users')->insertGetId([
             'name' => 'Ahmad Fauzi',
             'email' => 'mahasiswa@sipma.test',
@@ -63,30 +65,15 @@ class DatabaseSeeder extends Seeder
             'username' => '2024001',
             'password' => Hash::make('password'),
             'role' => 'mahasiswa',
-            'department' => 'Teknik Informatika',
-            'faculty' => 'Fakultas Ilmu Komputer',
+            'department' => 'Informatika',
+            'faculty' => 'FITK',
             'student_id' => $studentIds['2024001'],
             'created_at' => $now,
             'updated_at' => $now,
         ]);
 
-        // Kemahasiswaan (Verifikator & Global Analyst - Super Admin)
-        $kemahasiswaanUser = DB::table('users')->insertGetId([
-            'name' => 'Dra. Siti Rahma, M.Pd.',
-            'email' => 'kemahasiswaan@sipma.test',
-            'nim' => null,
-            'username' => 'kemahasiswaan',
-            'password' => Hash::make('password'),
-            'role' => 'kemahasiswaan',
-            'department' => null,
-            'faculty' => null,
-            'student_id' => null,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        // Also alias 'admin@sipma.test'
-        DB::table('users')->insert([
+        // B. Admin Kemahasiswaan
+        $adminKemahasiswaanId = DB::table('users')->insertGetId([
             'name' => 'Admin Kemahasiswaan',
             'email' => 'admin@sipma.test',
             'nim' => null,
@@ -100,57 +87,26 @@ class DatabaseSeeder extends Seeder
             'updated_at' => $now,
         ]);
 
-        // Ketua Jurusan (Kajur TI)
-        $kajurTiUser = DB::table('users')->insertGetId([
-            'name' => 'Dr. Hendra Wijaya, S.Kom., M.T.',
-            'email' => 'kajur@sipma.test',
+        DB::table('users')->insert([
+            'name' => 'Bagian Kemahasiswaan',
+            'email' => 'kemahasiswaan@sipma.test',
             'nim' => null,
-            'username' => 'kajur_ti',
+            'username' => 'kemahasiswaan',
             'password' => Hash::make('password'),
-            'role' => 'kajur',
-            'department' => 'Teknik Informatika',
-            'faculty' => 'Fakultas Ilmu Komputer',
-            'student_id' => null,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        // Ketua Jurusan SI
-        $kajurSiUser = DB::table('users')->insertGetId([
-            'name' => 'Dr. Ir. Maya Sari, M.T.',
-            'email' => 'kajur.si@sipma.test',
-            'nim' => null,
-            'username' => 'kajur_si',
-            'password' => Hash::make('password'),
-            'role' => 'kajur',
-            'department' => 'Sistem Informasi',
-            'faculty' => 'Fakultas Ilmu Komputer',
-            'student_id' => null,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        // Dekan (Fakultas Ilmu Komputer)
-        $dekanUser = DB::table('users')->insertGetId([
-            'name' => 'Prof. Dr. Ir. Budi Darmawan, M.Eng.',
-            'email' => 'dekan@sipma.test',
-            'nim' => null,
-            'username' => 'dekan',
-            'password' => Hash::make('password'),
-            'role' => 'dekan',
+            'role' => 'kemahasiswaan',
             'department' => null,
-            'faculty' => 'Fakultas Ilmu Komputer',
+            'faculty' => null,
             'student_id' => null,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
 
-        // Wakil Rektor (Warek) - Universitas
+        // C. Warek 3 (Bidang Kemahasiswaan & Kerjasama - Universitas)
         $warekUser = DB::table('users')->insertGetId([
-            'name' => 'Prof. Dr. Suharto, M.Sc.',
-            'email' => 'warek@sipma.test',
+            'name' => 'Prof. Dr. H. Syarif Hidayat, M.Ag.',
+            'email' => 'warek3@sipma.test',
             'nim' => null,
-            'username' => 'warek',
+            'username' => 'warek3',
             'password' => Hash::make('password'),
             'role' => 'warek',
             'department' => null,
@@ -160,20 +116,139 @@ class DatabaseSeeder extends Seeder
             'updated_at' => $now,
         ]);
 
-        // 4. Violation Categories & Types
+        // D. 5 Wadek 3 (Satu Akun per Fakultas)
+        $wadekList = [
+            [
+                'name' => 'Dr. H. Saifuddin, M.Pd.',
+                'email' => 'wadek3.fitk@sipma.test',
+                'username' => 'wadek3_fitk',
+                'faculty' => 'FITK',
+            ],
+            [
+                'name' => 'Dr. Hj. Nur Aini, M.E.Sy.',
+                'email' => 'wadek3.febi@sipma.test',
+                'username' => 'wadek3_febi',
+                'faculty' => 'FEBI',
+            ],
+            [
+                'name' => 'Dr. Ahmad Mubarok, S.H., M.H.',
+                'email' => 'wadek3.syariah@sipma.test',
+                'username' => 'wadek3_syariah',
+                'faculty' => 'Fakultas Syariah',
+            ],
+            [
+                'name' => 'Dr. H. Abdul Ghofur, M.Ag.',
+                'email' => 'wadek3.fua@sipma.test',
+                'username' => 'wadek3_fua',
+                'faculty' => 'FUA',
+            ],
+            [
+                'name' => 'Dr. Hj. Siti Rohmah, M.Si.',
+                'email' => 'wadek3.fdki@sipma.test',
+                'username' => 'wadek3_fdki',
+                'faculty' => 'FDKI',
+            ],
+        ];
+
+        foreach ($wadekList as $w) {
+            DB::table('users')->insert([
+                'name' => $w['name'],
+                'email' => $w['email'],
+                'nim' => null,
+                'username' => $w['username'],
+                'password' => Hash::make('password'),
+                'role' => 'wadek3',
+                'department' => null,
+                'faculty' => $w['faculty'],
+                'student_id' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        // E. Kajur untuk Setiap Jurusan di 5 Fakultas
+        $departmentsMapping = ReportController::$departments;
+
+        // Custom slug map for clean emails
+        $slugOverrides = [
+            'Pendidikan Agama Islam' => 'pai',
+            'Pendidikan Bahasa Arab' => 'pba',
+            'Tadris Bahasa Inggris' => 'tbi',
+            'Tadris IPS' => 'tips',
+            'Tadris Matematika' => 'tmat',
+            'Tadris Biologi' => 'tbio',
+            'Pendidikan Guru Madrasah Ibtidaiyah (PGMI)' => 'pgmi',
+            'Pendidikan Islam Anak Usia Dini (PIAUD)' => 'piaud',
+            'Manajemen Pendidikan Islam' => 'mpi',
+            'Tadris Bahasa Indonesia' => 'tbindo',
+            'Tadris Kimia' => 'tkimia',
+            'Informatika' => 'if',
+            'Matematika' => 'mat',
+            'PJJ Pendidikan Agama Islam' => 'pjjpai',
+            'PJJ Pendidikan Bahasa Arab' => 'pjjpba',
+            'PJJ Pendidikan Guru Madrasah Ibtidaiyah' => 'pjjpgmi',
+            'Perbankan Syariah' => 'ps',
+            'Ekonomi Syariah' => 'es',
+            'Akuntansi Syariah' => 'as',
+            'Pariwisata Syariah' => 'parsya',
+            'Bioteknologi' => 'bio',
+            'Hukum Keluarga Islam' => 'hki',
+            'Hukum Ekonomi Syariah' => 'hes',
+            'Hukum Tata Negara' => 'htn',
+            'Ilmu Falak' => 'falak',
+            'PJJ Hukum Keluarga Islam' => 'pjjhki',
+            'Sejarah Peradaban Islam' => 'spi',
+            'Aqidah dan Filsafat Islam' => 'afi',
+            'Ilmu Al-Qur\'an dan Tafsir' => 'iat',
+            'Ilmu Hadis' => 'ih',
+            'Bahasa dan Sastra Arab' => 'bsa',
+            'Tasawuf dan Psikoterapi' => 'tp',
+            'PJJ Sejarah Peradaban Islam' => 'pjjspi',
+            'Komunikasi dan Penyiaran Islam' => 'kpi',
+            'Pengembangan Masyarakat Islam' => 'pmi',
+            'Bimbingan dan Konseling Islam' => 'bki',
+            'Sosiologi Agama' => 'sa',
+        ];
+
+        $kajurUsersByDept = [];
+
+        foreach ($departmentsMapping as $deptName => $facName) {
+            $slug = $slugOverrides[$deptName] ?? strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $deptName));
+            $email = "kajur.{$slug}@sipma.test";
+            $username = "kajur_{$slug}";
+            $name = "Dr. Ketua Jurusan " . $deptName;
+
+            $kajurId = DB::table('users')->insertGetId([
+                'name' => $name,
+                'email' => $email,
+                'nim' => null,
+                'username' => $username,
+                'password' => Hash::make('password'),
+                'role' => 'kajur',
+                'department' => $deptName,
+                'faculty' => $facName,
+                'student_id' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $kajurUsersByDept[$deptName] = $kajurId;
+        }
+
+        // 4. Seed Violation Categories & Types
         $catAkademik = DB::table('violation_categories')->insertGetId([
             'name' => 'Akademik',
-            'description' => 'Pelanggaran yang berkaitan dengan kegiatan akademik & ujian',
+            'description' => 'Pelanggaran berkaitan dengan kejujuran & etika kegiatan perkuliahan/ujian',
             'created_at' => $now, 'updated_at' => $now,
         ]);
         $catTataTertib = DB::table('violation_categories')->insertGetId([
             'name' => 'Tata Tertib Kampus',
-            'description' => 'Pelanggaran tata tertib, fasilitas, dan ketertiban umum',
+            'description' => 'Pelanggaran fasilitas kampus, ketertiban umum, dan norma lingkungan',
             'created_at' => $now, 'updated_at' => $now,
         ]);
         $catEtika = DB::table('violation_categories')->insertGetId([
             'name' => 'Etika & Moral',
-            'description' => 'Pelanggaran etika, kesopanan, perundungan, atau pelecehan',
+            'description' => 'Pelanggaran etika, kesopanan, perundungan, atau norma kesantunan kampus',
             'created_at' => $now, 'updated_at' => $now,
         ]);
 
@@ -181,16 +256,16 @@ class DatabaseSeeder extends Seeder
             'violation_category_id' => $catAkademik,
             'name' => 'Plagiarisme & Kecurangan Ujian',
             'severity' => 'berat',
-            'default_points' => 75,
-            'default_sanction' => 'Skorsing 1 Semester / Nilai E',
+            'default_points' => 0,
+            'default_sanction' => 'Skorsing / Pembatalan Nilai',
             'created_at' => $now, 'updated_at' => $now,
         ]);
 
         $typeMerokok = DB::table('violation_types')->insertGetId([
             'violation_category_id' => $catTataTertib,
-            'name' => 'Merokok / Vape di Kawasan Terlarang',
+            'name' => 'Merokok / Vape di Kawasan Terlarang Kampus',
             'severity' => 'ringan',
-            'default_points' => 20,
+            'default_points' => 0,
             'default_sanction' => 'Teguran Lisan / Tertulis',
             'created_at' => $now, 'updated_at' => $now,
         ]);
@@ -199,31 +274,33 @@ class DatabaseSeeder extends Seeder
             'violation_category_id' => $catEtika,
             'name' => 'Perkelahian & Keributan',
             'severity' => 'sedang',
-            'default_points' => 50,
-            'default_sanction' => 'Surat Peringatan & Pemanggilan Ortu',
+            'default_points' => 0,
+            'default_sanction' => 'Surat Peringatan & Pemanggilan Wali Mahasiswa',
             'created_at' => $now, 'updated_at' => $now,
         ]);
 
-        // 5. Seed Violation Reports across lifecycle stages
+        // 5. Seed Sample Violation Reports (Menggunakan Fakultas & Jurusan Baru, Semester Angka)
         $sampleReports = [
             [
                 'report_number' => 'REP-202610-001',
                 'student_id' => $studentIds['2024002'],
                 'reported_name' => 'Budi Santoso',
                 'reported_nim' => '2024002',
-                'reported_department' => 'Teknik Informatika',
-                'target_department' => 'Teknik Informatika',
+                'reported_faculty' => 'FITK',
+                'reported_department' => 'Pendidikan Agama Islam',
+                'target_department' => 'Pendidikan Agama Islam',
                 'violation_type_id' => $typePlagiarisme,
                 'reporter_id' => $mahasiswaUser,
-                'points' => 75,
+                'points' => 0,
                 'severity' => 'Berat',
                 'incident_date' => Carbon::now()->subDays(2)->toDateString(),
-                'incident_time' => '10:30:00',
-                'incident_location' => 'Laboratorium Komputer 3, Gedung B',
-                'chronology' => 'Terlapor terbukti menyontek tugas akhir dan menggunakan source code rekan lain tanpa izin pada saat praktikum.',
-                'status' => 'pending', // Baru dilaporkan, menunggu verifikasi Kemahasiswaan
+                'incident_time' => '10:30',
+                'incident_location' => 'Ruang Ujian Gedung FITK Lt. 3',
+                'chronology' => 'Terlapor terbukti membawa contekan dan menggunakan gawai tanpa izin saat ujian tengah semester berlangsung.',
+                'status' => 'pending',
                 'academic_year' => '2026/2027',
                 'semester' => 'Ganjil',
+                'reported_semester' => '3',
                 'created_at' => Carbon::now()->subDays(2),
                 'updated_at' => Carbon::now()->subDays(2),
             ],
@@ -232,47 +309,51 @@ class DatabaseSeeder extends Seeder
                 'student_id' => $studentIds['2024003'],
                 'reported_name' => 'Citra Lestari',
                 'reported_nim' => '2024003',
-                'reported_department' => 'Sistem Informasi',
-                'target_department' => 'Sistem Informasi',
+                'reported_faculty' => 'FEBI',
+                'reported_department' => 'Perbankan Syariah',
+                'target_department' => 'Perbankan Syariah',
                 'violation_type_id' => $typeMerokok,
                 'reporter_id' => $mahasiswaUser,
-                'points' => 20,
+                'points' => 0,
                 'severity' => 'Ringan',
                 'incident_date' => Carbon::now()->subDays(4)->toDateString(),
-                'incident_time' => '14:15:00',
-                'incident_location' => 'Kantin Gedung C',
-                'chronology' => 'Terlapor merokok di area tertutup kantin yang sudah terdapat tanda dilarang merokok.',
-                'status' => 'dikonfirmasi', // Kemahasiswaan approve -> diteruskan ke Kajur SI
-                'verified_by' => $kemahasiswaanUser,
+                'incident_time' => '14:15',
+                'incident_location' => 'Selasar Gedung FEBI',
+                'chronology' => 'Terlapor menggunakan rokok elektrik di area koridor yang telah terpasang stiker larangan merokok.',
+                'status' => 'dikonfirmasi',
+                'verified_by' => $adminKemahasiswaanId,
                 'verified_at' => Carbon::now()->subDays(3),
                 'academic_year' => '2026/2027',
                 'semester' => 'Ganjil',
+                'reported_semester' => '5',
                 'created_at' => Carbon::now()->subDays(4),
                 'updated_at' => Carbon::now()->subDays(3),
             ],
             [
                 'report_number' => 'REP-202610-003',
-                'student_id' => $studentIds['2024002'],
-                'reported_name' => 'Budi Santoso',
-                'reported_nim' => '2024002',
-                'reported_department' => 'Teknik Informatika',
-                'target_department' => 'Teknik Informatika',
+                'student_id' => $studentIds['2024004'],
+                'reported_name' => 'Doni Kusuma',
+                'reported_nim' => '2024004',
+                'reported_faculty' => 'Fakultas Syariah',
+                'reported_department' => 'Hukum Keluarga Islam',
+                'target_department' => 'Hukum Keluarga Islam',
                 'violation_type_id' => $typePerkelahian,
                 'reporter_id' => $mahasiswaUser,
-                'points' => 50,
+                'points' => 0,
                 'severity' => 'Sedang',
                 'incident_date' => Carbon::now()->subDays(6)->toDateString(),
-                'incident_time' => '16:00:00',
-                'incident_location' => 'Area Parkir Barat',
-                'chronology' => 'Terjadi adu argumen yang berlanjut pada aksi dorong-mendorong dengan sesama mahasiswa di area parkir.',
-                'status' => 'diproses', // Kajur TI sedang menindaklanjuti
-                'verified_by' => $kemahasiswaanUser,
+                'incident_time' => '16:00',
+                'incident_location' => 'Area Parkir Fakultas Syariah',
+                'chronology' => 'Terjadi adu mulut yang berujung keributan fisik antar mahasiswa di area parkir kendaraan.',
+                'status' => 'diproses',
+                'verified_by' => $adminKemahasiswaanId,
                 'verified_at' => Carbon::now()->subDays(5),
                 'academic_year' => '2026/2027',
                 'semester' => 'Ganjil',
+                'reported_semester' => '3',
                 'sanction_type' => 'Pemanggilan Mahasiswa & Klarifikasi',
-                'kajur_notes' => 'Telah dilakukan pemanggilan awal mahasiswa terlapor ke ruang jurusan pada hari Selasa.',
-                'handled_by' => $kajurTiUser,
+                'kajur_notes' => 'Telah dilakukan pemanggilan awal ke ruang jurusan untuk klarifikasi mediasi.',
+                'handled_by' => $kajurUsersByDept['Hukum Keluarga Islam'] ?? null,
                 'handled_at' => Carbon::now()->subDays(4),
                 'created_at' => Carbon::now()->subDays(6),
                 'updated_at' => Carbon::now()->subDays(4),
@@ -282,100 +363,82 @@ class DatabaseSeeder extends Seeder
                 'student_id' => $studentIds['2024001'],
                 'reported_name' => 'Ahmad Fauzi',
                 'reported_nim' => '2024001',
-                'reported_department' => 'Teknik Informatika',
-                'target_department' => 'Teknik Informatika',
+                'reported_faculty' => 'FITK',
+                'reported_department' => 'Informatika',
+                'target_department' => 'Informatika',
                 'violation_type_id' => $typeMerokok,
-                'reporter_id' => $kemahasiswaanUser,
-                'points' => 20,
+                'reporter_id' => $adminKemahasiswaanId,
+                'points' => 0,
                 'severity' => 'Ringan',
                 'incident_date' => Carbon::now()->subDays(10)->toDateString(),
-                'incident_time' => '11:00:00',
-                'incident_location' => 'Lantai 2 Koridor Gedung A',
-                'chronology' => 'Membawa rokok elektrik dan menghembuskan uap di dalam ruang koridor perkuliahan.',
-                'status' => 'selesai', // Kajur TI selesai memberikan sanksi
-                'verified_by' => $kemahasiswaanUser,
+                'incident_time' => '11:00',
+                'incident_location' => 'Laboratorium Komputer FITK Lt. 2',
+                'chronology' => 'Membawa minuman dan makanan yang dilarang di dalam area laboratorium komputer.',
+                'status' => 'selesai',
+                'verified_by' => $adminKemahasiswaanId,
                 'verified_at' => Carbon::now()->subDays(9),
                 'sanction_type' => 'Teguran Lisan & Surat Pernyataan',
-                'kajur_notes' => 'Mahasiswa telah hadir didampingi dosen wali, menandatangani surat pernyataan tidak mengulangi perbuatan.',
-                'handled_by' => $kajurTiUser,
+                'kajur_notes' => 'Mahasiswa telah menandatangani surat kesediaan mematuhi tata tertib laboratorium.',
+                'handled_by' => $kajurUsersByDept['Informatika'] ?? null,
                 'handled_at' => Carbon::now()->subDays(7),
                 'completed_at' => Carbon::now()->subDays(7),
                 'academic_year' => '2026/2027',
                 'semester' => 'Ganjil',
+                'reported_semester' => '2',
                 'created_at' => Carbon::now()->subDays(10),
                 'updated_at' => Carbon::now()->subDays(7),
             ],
             [
                 'report_number' => 'REP-202610-005',
-                'student_id' => null,
-                'reported_name' => 'Rian Hidayat',
-                'reported_nim' => '2024999',
-                'reported_department' => 'Teknik Elektro',
-                'target_department' => 'Teknik Elektro',
-                'violation_type_id' => null,
-                'reporter_id' => $mahasiswaUser,
-                'points' => 0,
-                'severity' => 'Suspek',
-                'incident_date' => Carbon::now()->subDays(8)->toDateString(),
-                'incident_time' => '09:00:00',
-                'incident_location' => 'Gerbang Utama Kampus',
-                'chronology' => 'Informasi dugaan coret-coret dinding pos satpam.',
-                'status' => 'ditolak', // Ditolak Kemahasiswaan
-                'rejection_reason' => 'Bukti foto tidak jelas dan NIM terlapor tidak terdaftar pada pangkalan data kampus.',
-                'verified_by' => $kemahasiswaanUser,
-                'verified_at' => Carbon::now()->subDays(7),
-                'academic_year' => '2026/2027',
-                'semester' => 'Ganjil',
-                'created_at' => Carbon::now()->subDays(8),
-                'updated_at' => Carbon::now()->subDays(7),
-            ],
-            [
-                'report_number' => 'REP-202610-006',
-                'student_id' => $studentIds['2024004'],
-                'reported_name' => 'Doni Kusuma',
-                'reported_nim' => '2024004',
-                'reported_department' => 'Teknik Elektro',
-                'target_department' => 'Teknik Elektro',
-                'violation_type_id' => $typePlagiarisme,
-                'reporter_id' => $mahasiswaUser,
-                'points' => 75,
-                'severity' => 'Berat',
-                'incident_date' => Carbon::now()->subMonths(1)->toDateString(),
-                'incident_time' => '13:00:00',
-                'incident_location' => 'Ruang Ujian Gedung Elektro',
-                'chronology' => 'Membawa contekan lembar kertas saat ujian tengah semester.',
-                'status' => 'selesai',
-                'verified_by' => $kemahasiswaanUser,
-                'sanction_type' => 'Surat Peringatan (SP 1) & Nilai Matkul Dibatalkan',
-                'kajur_notes' => 'Sanksi telah diputuskan rapat jurusan Teknik Elektro.',
-                'academic_year' => '2026/2027',
-                'semester' => 'Ganjil',
-                'created_at' => Carbon::now()->subMonths(1),
-                'updated_at' => Carbon::now()->subMonths(1),
-            ],
-            [
-                'report_number' => 'REP-202610-007',
                 'student_id' => $studentIds['2024005'],
                 'reported_name' => 'Eka Prasetya',
                 'reported_nim' => '2024005',
-                'reported_department' => 'Manajemen',
-                'target_department' => 'Manajemen',
+                'reported_faculty' => 'FDKI',
+                'reported_department' => 'Komunikasi dan Penyiaran Islam',
+                'target_department' => 'Komunikasi dan Penyiaran Islam',
                 'violation_type_id' => $typePerkelahian,
                 'reporter_id' => $mahasiswaUser,
-                'points' => 50,
+                'points' => 0,
                 'severity' => 'Sedang',
-                'incident_date' => Carbon::now()->subMonths(2)->toDateString(),
-                'incident_time' => '15:30:00',
-                'incident_location' => 'Lapangan Olahraga',
-                'chronology' => 'Keributan antar suporter pertandingan futsal kampus.',
+                'incident_date' => Carbon::now()->subDays(5)->toDateString(),
+                'incident_time' => '13:00',
+                'incident_location' => 'Depan Studio Radio FDKI',
+                'chronology' => 'Mengeluarkan kata-kata tidak pantas dan memicu kericuhan di depan ruang studio.',
                 'status' => 'selesai',
-                'verified_by' => $kemahasiswaanUser,
-                'sanction_type' => 'Pembinaan Karakter & Kerja Sosial Kampus',
-                'kajur_notes' => 'Mahasiswa menjalankan pembinaan selama 1 minggu.',
-                'academic_year' => '2025/2026',
-                'semester' => 'Genap',
-                'created_at' => Carbon::now()->subMonths(2),
-                'updated_at' => Carbon::now()->subMonths(2),
+                'verified_by' => $adminKemahasiswaanId,
+                'sanction_type' => 'Pembinaan Karakter & Kerja Sosial',
+                'kajur_notes' => 'Telah dibina oleh Kajur dan dosen wali.',
+                'handled_by' => $kajurUsersByDept['Komunikasi dan Penyiaran Islam'] ?? null,
+                'handled_at' => Carbon::now()->subDays(3),
+                'completed_at' => Carbon::now()->subDays(3),
+                'academic_year' => '2026/2027',
+                'semester' => 'Ganjil',
+                'reported_semester' => '4',
+                'created_at' => Carbon::now()->subDays(5),
+                'updated_at' => Carbon::now()->subDays(3),
+            ],
+            [
+                'report_number' => 'REP-202610-006',
+                'student_id' => $studentIds['2024006'],
+                'reported_name' => 'Fatimah Zahra',
+                'reported_nim' => '2024006',
+                'reported_faculty' => 'FUA',
+                'reported_department' => 'Ilmu Al-Qur\'an dan Tafsir',
+                'target_department' => 'Ilmu Al-Qur\'an dan Tafsir',
+                'violation_type_id' => $typeMerokok,
+                'reporter_id' => $mahasiswaUser,
+                'points' => 0,
+                'severity' => 'Ringan',
+                'incident_date' => Carbon::now()->subDays(1)->toDateString(),
+                'incident_time' => '09:00',
+                'incident_location' => 'Gazebo Belakang FUA',
+                'chronology' => 'Meninggalkan sampah makanan dan merusak inventaris taman gazebo.',
+                'status' => 'pending',
+                'academic_year' => '2026/2027',
+                'semester' => 'Ganjil',
+                'reported_semester' => '1',
+                'created_at' => Carbon::now()->subDays(1),
+                'updated_at' => Carbon::now()->subDays(1),
             ],
         ];
 

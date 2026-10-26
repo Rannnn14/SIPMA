@@ -232,7 +232,31 @@
     <div class="card border-0 text-white shadow-sm mb-4 overflow-hidden" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%); border-radius: 16px;">
         <div class="card-body p-4 p-md-5 d-flex flex-column flex-md-row align-items-md-center justify-content-between position-relative">
             <div style="z-index: 2;">
-                <h2 class="font-weight-bold mb-2 text-white">Selamat Datang, {{ auth()->user()->clean_name }}!</h2>
+                <h2 class="font-weight-bold mb-1 text-white">Selamat Datang, {{ auth()->user()->clean_name }}!</h2>
+                @if($bridgeProfile && !empty($bridgeProfile['nim']))
+                    <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 8px;">
+                        <span class="badge" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem; border-radius:20px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3);">
+                            <i class="fas fa-id-card mr-1"></i> {{ $bridgeProfile['nim'] ?? '-' }}
+                        </span>
+                        @if(!empty($bridgeProfile['prodi']))
+                        <span class="badge" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem; border-radius:20px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3);">
+                            <i class="fas fa-graduation-cap mr-1"></i> {{ $bridgeProfile['prodi'] }}
+                        </span>
+                        @endif
+                        @if(!empty($bridgeProfile['angkatan']))
+                        <span class="badge" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem; border-radius:20px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3);">
+                            <i class="fas fa-calendar mr-1"></i> Angkatan {{ $bridgeProfile['angkatan'] }}
+                        </span>
+                        @endif
+                        <span class="badge" style="background: rgba(74,222,128,0.3); color:#d1fae5; font-size:0.75rem; border-radius:20px; padding: 4px 10px; border: 1px solid rgba(74,222,128,0.4);">
+                            <i class="fas fa-plug mr-1"></i> Terkoneksi via Bridge API
+                        </span>
+                    </div>
+                @else
+                    <p class="text-white-50 mb-3" style="max-width: 680px; font-size: 0.9rem;">
+                        Portal pelaporan pelanggaran tata tertib mahasiswa.
+                    </p>
+                @endif
                 <p class="text-white-50 mb-4" style="max-width: 680px; font-size: 0.95rem; line-height: 1.6;">
                     Sampaikan laporan pelanggaran tata tertib mahasiswa secara objektif, jujur, dan bertanggung jawab demi terciptanya ketertiban dan integritas kampus.
                 </p>
@@ -248,70 +272,83 @@
         </div>
     </div>
 
-        <!-- 3 Modern Feature Cards -->
-        <div class="row mb-5">
+        <!-- Alur pelaporan: tampilan mengikuti banner dashboard, isi tetap -->
+        <div class="card border-0 text-white shadow-sm mb-4 overflow-hidden sop-banner">
+        <div class="card-body p-4">
+        <div class="d-flex align-items-center mb-3 pb-2 border-bottom" style="border-color: rgba(255,255,255,0.18) !important;">
+            <div class="rounded-circle d-flex align-items-center justify-content-center mr-3 flex-shrink-0" style="width: 42px; height: 42px; background: rgba(255,255,255,0.2); font-size: 1.1rem;">
+                <i class="fas fa-route text-white"></i>
+            </div>
+            <div>
+                <h5 class="font-weight-bold text-white mb-0" style="letter-spacing: -0.2px;">Alur Pelaporan Pelanggaran Mahasiswa</h5>
+                <small class="text-white-50">Informasi fitur dan proses pelaporan</small>
+            </div>
+        </div>
+        <div class="row mb-0">
             <!-- Fitur 1 -->
             <div class="col-md-4 mb-3 mb-md-0">
-                <div class="card feature-card h-100 p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #2563eb;">
+                <div class="card h-100 p-3" style="background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; box-shadow: none;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: rgba(255,255,255,0.18); color: #fff;">
                             <i class="fas fa-file-signature fa-lg"></i>
                         </div>
-                        <span class="badge badge-primary-subtle text-primary font-weight-bold px-3 py-1" style="background-color: #eff6ff; border-radius: 8px; font-size: 0.75rem;">
+                        <span class="badge font-weight-bold px-3 py-1" style="background: rgba(255,255,255,0.16); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; font-size: 0.78rem;">
                             Fitur Utama
                         </span>
                     </div>
-                    <h6 class="font-weight-bold text-dark mb-2" style="font-size: 1.05rem;">1. Formulir Pelaporan Mandiri</h6>
-                    <p class="small text-muted mb-3" style="line-height: 1.6;">
+                    <h6 class="font-weight-bold text-white mb-2" style="font-size: 1rem;">1. Formulir Pelaporan Mandiri</h6>
+                    <p class="small text-white-50 mb-3" style="line-height: 1.45;">
                         Pengisian data pelanggaran secara manual dan terstruktur: Nama Terlapor, NIM, Fakultas & Jurusan, Waktu & Jam Kejadian, Lokasi, Kategori Pelanggaran, dan Uraian Kronologi Lengkap.
                     </p>
-                    <div class="mt-auto pt-2 border-top text-xs font-weight-bold text-primary d-flex align-items-center">
-                        <i class="fas fa-check-circle mr-1 text-primary"></i> Input Mandiri & Fleksibel
+                    <div class="mt-auto pt-2 border-top text-xs font-weight-bold d-flex align-items-center" style="color: #99f6e4; border-color: rgba(255,255,255,0.18) !important;">
+                        <i class="fas fa-check-circle mr-1"></i> Input Mandiri & Fleksibel
                     </div>
                 </div>
             </div>
 
             <!-- Fitur 2 -->
             <div class="col-md-4 mb-3 mb-md-0">
-                <div class="card feature-card h-100 p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px; background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); color: #0891b2;">
+                <div class="card h-100 p-3" style="background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; box-shadow: none;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: rgba(255,255,255,0.18); color: #fff;">
                             <i class="fas fa-cloud-upload-alt fa-lg"></i>
                         </div>
-                        <span class="badge badge-info-subtle text-info font-weight-bold px-3 py-1" style="background-color: #ecfeff; border-radius: 8px; font-size: 0.75rem;">
+                        <span class="badge font-weight-bold px-3 py-1" style="background: rgba(255,255,255,0.16); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; font-size: 0.78rem;">
                             Multi-Format
                         </span>
                     </div>
-                    <h6 class="font-weight-bold text-dark mb-2" style="font-size: 1.05rem;">2. Unggah Bukti Digital</h6>
-                    <p class="small text-muted mb-3" style="line-height: 1.6;">
+                    <h6 class="font-weight-bold text-white mb-2" style="font-size: 1rem;">2. Unggah Bukti Digital</h6>
+                    <p class="small text-white-50 mb-3" style="line-height: 1.45;">
                         Mendukung lampiran bukti digital kejadian berupa Foto (JPG, PNG), Berkas Dokumen Resmi (PDF), atau Video singkat (MP4) hingga batas 10 MB untuk memperkuat verifikasi kasus.
                     </p>
-                    <div class="mt-auto pt-2 border-top text-xs font-weight-bold text-info d-flex align-items-center">
-                        <i class="fas fa-check-circle mr-1 text-info"></i> Mendukung JPG, PNG, PDF & MP4
+                    <div class="mt-auto pt-2 border-top text-xs font-weight-bold d-flex align-items-center" style="color: #99f6e4; border-color: rgba(255,255,255,0.18) !important;">
+                        <i class="fas fa-check-circle mr-1"></i> Mendukung JPG, PNG, PDF & MP4
                     </div>
                 </div>
             </div>
 
             <!-- Fitur 3 -->
             <div class="col-md-4">
-                <div class="card feature-card h-100 p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #b45309;">
+                <div class="card h-100 p-3" style="background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; box-shadow: none;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: rgba(255,255,255,0.18); color: #fff;">
                             <i class="fas fa-clipboard-check fa-lg"></i>
                         </div>
-                        <span class="badge badge-warning-subtle font-weight-bold px-3 py-1" style="background-color: #fffbeb; color: #b45309 !important; border-radius: 8px; font-size: 0.75rem;">
+                        <span class="badge font-weight-bold px-3 py-1" style="background: rgba(255,255,255,0.16); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; font-size: 0.78rem;">
                             Alur Resmi
                         </span>
                     </div>
-                    <h6 class="font-weight-bold text-dark mb-2" style="font-size: 1.05rem;">3. Penanganan Kasus Terpadu</h6>
-                    <p class="small text-muted mb-3" style="line-height: 1.6;">
+                    <h6 class="font-weight-bold text-white mb-2" style="font-size: 1rem;">3. Penanganan Kasus Terpadu</h6>
+                    <p class="small text-white-50 mb-3" style="line-height: 1.45;">
                         Laporan yang diajukan diverifikasi secara objektif untuk tindak lanjut pembinaan serta sanksi berkeadilan.
                     </p>
-                    <div class="mt-auto pt-2 border-top text-xs font-weight-bold d-flex align-items-center" style="color: #b45309;">
+                    <div class="mt-auto pt-2 border-top text-xs font-weight-bold d-flex align-items-center" style="color: #99f6e4; border-color: rgba(255,255,255,0.18) !important;">
                         <i class="fas fa-check-circle mr-1"></i> Verifikasi Laporan
                     </div>
                 </div>
             </div>
+        </div>
+        </div>
         </div>
 
     <!-- 2. Formulir Langsung Pelaporan Pelanggaran Mahasiswa -->
@@ -403,6 +440,31 @@
                             </select>
                         </div>
                         <small class="text-muted mt-1 d-block">Pilih program studi / jurusan mahasiswa terlapor.</small>
+                    </div>
+
+                    <!-- Semester Terlapor (Input Manual Angka Saja) -->
+                    <div class="col-md-6 mb-4">
+                        <label class="font-weight-bold text-dark small mb-2">
+                            Semester Terlapor <span class="text-danger">*</span>
+                        </label>
+                        <div class="modern-input-group">
+                            <i class="fas fa-hashtag input-icon"></i>
+                            <input type="text" 
+                                   name="reported_semester" 
+                                   id="reportedSemesterInput" 
+                                   value="{{ old('reported_semester') }}" 
+                                   required 
+                                   class="form-control" 
+                                   placeholder="Contoh: 4"
+                                   inputmode="numeric"
+                                   pattern="[0-9]+"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                                   title="Hanya boleh memasukkan angka">
+                        </div>
+                        <small class="text-muted mt-1 d-block">
+                            <i class="fas fa-info-circle mr-1 text-info"></i>
+                            Ketik semester perkuliahan mahasiswa terlapor saat ini (hanya angka, contoh: 2, 4, 6).
+                        </small>
                     </div>
                 </div>
             </div>
@@ -543,14 +605,14 @@
                     </small>
                 </div>
 
-                <!-- Unggah Berkas Bukti (Modern Dropzone Box) -->
+                <!-- Unggah Berkas Bukti (Wajib Diisi) -->
                 <div class="form-group mb-4">
-                    <label class="font-weight-bold text-dark small mb-2">Unggah Berkas Bukti Pendukung (Opsional)</label>
+                    <label class="font-weight-bold text-dark small mb-2">Unggah Berkas Bukti Pendukung <span class="text-danger">*</span></label>
                     
                     <div class="dropzone-box" onclick="document.getElementById('evidenceFile').click()">
-                        <input type="file" name="evidence" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4" style="display: none;">
+                        <input type="file" name="evidence" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4" required style="display: none;">
                         <div class="mb-2">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto text-primary" style="width: 52px; height: 52px; background: #eff6ff;">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto text-primary" style="width: 52px; height: 52px; background: #f0fdfa;">
                                 <i class="fas fa-cloud-upload-alt fa-2x"></i>
                             </div>
                         </div>
@@ -590,7 +652,7 @@
         <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 360px;">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
                 <!-- Header Jam Digital -->
-                <div class="p-4 text-white text-center" style="background: linear-gradient(135deg, #1e1b4b 0%, #0f766e 100%);">
+                <div class="p-4 text-white text-center" style="background: linear-gradient(135deg, #134e4a 0%, #0f766e 100%);">
                     <div class="text-xs text-uppercase font-weight-bold mb-2" style="letter-spacing: 1px; opacity: 0.85;">
                         Pilih Jam Kejadian 
                     </div>
@@ -627,19 +689,17 @@
                     </div>
                 </div>
 
-                <!-- Modal Actions -->
-                <div class="modal-footer bg-light px-3 py-2 border-top d-flex align-items-center justify-content-between">
-                    <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold px-3 py-2" data-dismiss="modal" style="border-radius: 8px; font-size: 0.85rem;">
+                <!-- Modal Actions (Berderet Rapi dalam Satu Baris) -->
+                <div class="modal-footer bg-light px-3 py-2 border-top d-flex align-items-center justify-content-between flex-nowrap" style="gap: 8px;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold px-2 py-2 flex-fill text-center" data-dismiss="modal" style="border-radius: 8px; font-size: 0.82rem; white-space: nowrap;">
                         <i class="fas fa-times mr-1"></i> Batal
                     </button>
-                    <div class="d-flex align-items-center">
-                        <button type="button" class="btn btn-sm btn-light border font-weight-bold px-3 py-2 mr-2 text-dark" onclick="setNowTime()" style="border-radius: 8px; font-size: 0.85rem;">
-                            <i class="fas fa-clock text-info mr-1"></i> Sekarang
-                        </button>
-                        <button type="button" class="btn btn-sm btn-primary font-weight-bold px-3 py-2 text-white" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); border: 0; border-radius: 8px; font-size: 0.85rem;" onclick="confirmTimeSelection()">
-                            <i class="fas fa-check mr-1"></i> Terapkan
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-light border font-weight-bold px-2 py-2 flex-fill text-center text-dark" onclick="setNowTime()" style="border-radius: 8px; font-size: 0.82rem; white-space: nowrap;">
+                        <i class="fas fa-clock text-info mr-1"></i> Sekarang
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary font-weight-bold px-2 py-2 flex-fill text-center text-white" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); border: 0; border-radius: 8px; font-size: 0.82rem; white-space: nowrap;" onclick="confirmTimeSelection()">
+                        <i class="fas fa-check mr-1"></i> Terapkan
+                    </button>
                 </div>
             </div>
         </div>
@@ -649,7 +709,7 @@
     <script>
         // Data mapping Fakultas <-> Jurusan
         const facultyDepartmentMap = @json($faculties);
-        const departmentFacultyMap = @json(App\Http\Controllers\ReportController::$departments);
+        const departmentFacultyMap = @json($departmentFacultyMap);
 
         document.addEventListener('DOMContentLoaded', function () {
             const facultySelect = document.getElementById('facultySelect');

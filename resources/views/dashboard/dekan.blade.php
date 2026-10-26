@@ -99,12 +99,13 @@
                     <h6 class="m-0 font-weight-bold text-warning">
                         <i class="fas fa-chart-bar mr-1"></i> Grafik Pelanggaran Jurusan di {{ $myFaculty }}
                     </h6>
-                    <span class="badge badge-light border text-muted">Statistik Fakultas</span>
+                    <button type="button" class="btn btn-sm btn-light border" id="expandFacultyDeptChart"><i class="fas fa-expand-alt mr-1"></i>Perbesar</button>
                 </div>
                 <div class="card-body">
-                    <div style="position: relative; height: 280px;">
+                    <div style="position: relative; height: 280px;cursor:zoom-in;" title="Klik grafik untuk memperbesar">
                         <canvas id="facultyDeptChart"></canvas>
                     </div>
+                    <small class="text-muted d-block text-right mt-2"><i class="fas fa-search-plus mr-1"></i>Klik grafik untuk memperbesar.</small>
                 </div>
             </div>
         </div>
@@ -116,10 +117,10 @@
                     <h6 class="m-0 font-weight-bold text-warning">
                         <i class="fas fa-chart-pie mr-1"></i> Jenis Pelanggaran Paling Umum di Fakultas
                     </h6>
-                    <span class="badge badge-light border text-muted">Distribusi Keparahan</span>
+                    <button type="button" class="btn btn-sm btn-light border" id="expandFacultySeverityChart"><i class="fas fa-expand-alt mr-1"></i>Perbesar</button>
                 </div>
                 <div class="card-body">
-                    <div style="position: relative; height: 240px;">
+                    <div style="position: relative; height: 240px;cursor:zoom-in;" title="Klik grafik untuk memperbesar">
                         <canvas id="facultySeverityChart"></canvas>
                     </div>
                     <div class="mt-3 text-center small">
@@ -184,54 +185,56 @@
         document.addEventListener('DOMContentLoaded', function () {
             // Chart 1: Bar Chart Jurusan Fakultas
             const ctx1 = document.getElementById('facultyDeptChart').getContext('2d');
-            const deptLabels = {!! json_encode(array_keys($deptStats)) !!};
-            const deptValues = {!! json_encode(array_values($deptStats)) !!};
+            const deptLabels = {!! json_encode(array_slice(array_keys($deptStats), 0, 5)) !!};
+            const deptValues = {!! json_encode(array_slice(array_values($deptStats), 0, 5)) !!};
+            const allDeptLabels = {!! json_encode(array_keys($deptStats)) !!};
+            const allDeptValues = {!! json_encode(array_values($deptStats)) !!};
 
+            const deptChartData = {
+                labels: deptLabels,
+                datasets: [{ label: 'Total Kasus', data: deptValues, backgroundColor: '#f59e0b', hoverBackgroundColor: '#d97706', borderRadius: 6 }]
+            };
+            const deptChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 900, easing: 'easeOutQuart' },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                plugins: { legend: { display: false } }
+            };
             new Chart(ctx1, {
                 type: 'bar',
-                data: {
-                    labels: deptLabels,
-                    datasets: [{
-                        label: 'Total Kasus',
-                        data: deptValues,
-                        backgroundColor: '#f59e0b',
-                        hoverBackgroundColor: '#d97706',
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: 1 }
-                        }
-                    },
-                    plugins: { legend: { display: false } }
-                }
+                data: deptChartData,
+                options: deptChartOptions
             });
 
             // Chart 2: Donut Chart Jenis Pelanggaran
             const ctx2 = document.getElementById('facultySeverityChart').getContext('2d');
             const sevValues = {!! json_encode(array_values($severityCounts)) !!};
 
+            const severityLabels = ['Ringan', 'Sedang', 'Berat', 'Suspek'];
+            const severityChartData = {
+                labels: severityLabels,
+                datasets: [{ data: sevValues, backgroundColor: ['#06b6d4', '#f59e0b', '#ef4444', '#64748b'] }]
+            };
+            const severityChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 900, easing: 'easeOutQuart' },
+                plugins: { legend: { display: false } },
+                cutout: '65%'
+            };
             new Chart(ctx2, {
                 type: 'doughnut',
-                data: {
-                    labels: ['Ringan', 'Sedang', 'Berat', 'Suspek'],
-                    datasets: [{
-                        data: sevValues,
-                        backgroundColor: ['#06b6d4', '#f59e0b', '#ef4444', '#64748b']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    cutout: '65%'
-                }
+                data: severityChartData,
+                options: severityChartOptions
             });
+
+            const openFacultyDept = () => openChartModal('Grafik Pelanggaran Jurusan — {{ $myFaculty }}', 'bar', allDeptLabels, [{...deptChartData.datasets[0], data: allDeptValues}], deptChartOptions);
+            const openFacultySeverity = () => openChartModal('Jenis Pelanggaran — {{ $myFaculty }}', 'doughnut', severityLabels, severityChartData.datasets, severityChartOptions);
+            document.getElementById('facultyDeptChart').addEventListener('click', openFacultyDept);
+            document.getElementById('expandFacultyDeptChart').addEventListener('click', openFacultyDept);
+            document.getElementById('facultySeverityChart').addEventListener('click', openFacultySeverity);
+            document.getElementById('expandFacultySeverityChart').addEventListener('click', openFacultySeverity);
         });
     </script>
 </x-layout>

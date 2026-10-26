@@ -92,7 +92,12 @@ class ViolationReport extends Model
             return $this->reported_faculty;
         }
         $dept = $this->reported_department ?: $this->target_department;
-        return \App\Http\Controllers\ReportController::$departments[$dept] ?? 'Fakultas Lainnya';
+        return \App\Http\Controllers\ReportController::departmentFacultyMap()[$dept] ?? 'Fakultas Lainnya';
+    }
+
+    public function getFacultyNameAttribute(): string
+    {
+        return $this->faculty;
     }
 
     public function getDepartmentNameAttribute(): string

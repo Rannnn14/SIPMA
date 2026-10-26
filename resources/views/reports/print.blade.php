@@ -63,14 +63,13 @@
     <table class="table table-bordered mb-4">
         <thead class="thead-light text-center">
             <tr>
-                <th width="4%">No</th>
-                <th width="14%">No. Laporan</th>
-                <th width="12%">Tgl Kejadian</th>
-                <th width="18%">Mahasiswa Terlapor</th>
-                <th width="16%">Jurusan Terkait</th>
-                <th width="10%">Kategori</th>
-                <th width="12%">Status Kasus</th>
-                <th width="14%">Sanksi Ditetapkan</th>
+                <th width="5%">No</th>
+                <th width="16%">No. Laporan</th>
+                <th width="13%">Tgl Kejadian</th>
+                <th width="22%">Mahasiswa Terlapor</th>
+                <th width="20%">Jurusan</th>
+                <th width="12%">Semester</th>
+                <th width="12%">Kategori</th>
             </tr>
         </thead>
         <tbody>
@@ -84,13 +83,12 @@
                     <small>NIM: {{ $rep->student_nim }}</small>
                 </td>
                 <td>{{ $rep->department_name }}</td>
-                <td class="text-center">{{ $rep->severity ?? 'Umum' }}</td>
-                <td class="text-center">{{ $rep->status_label }}</td>
-                <td>{{ $rep->sanction_type ?? '-' }}</td>
+                <td class="text-center">{{ $rep->reported_semester ? 'Semester ' . $rep->reported_semester : '-' }}</td>
+                <td class="text-center">{{ $rep->severity ?? 'Ringan' }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="8" class="text-center py-3">Tidak ada data laporan.</td>
+                <td colspan="7" class="text-center py-3">Tidak ada data laporan terverifikasi.</td>
             </tr>
             @endforelse
         </tbody>

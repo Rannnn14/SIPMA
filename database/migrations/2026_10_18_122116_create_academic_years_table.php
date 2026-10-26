@@ -18,19 +18,13 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Insert initial academic years with 2026/2027 active
+        // Insert initial academic year with 2026/2027 active
         \Illuminate\Support\Facades\DB::table('academic_years')->insert([
             [
                 'year' => '2026/2027',
                 'is_active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ],
-            [
-                'year' => '2025/2026',
-                'is_active' => false,
-                'created_at' => now()->subYear(),
-                'updated_at' => now()->subYear(),
             ],
         ]);
     }

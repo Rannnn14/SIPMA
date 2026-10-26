@@ -162,14 +162,14 @@
         }
         .modern-table thead th {
             background-color: #f8fafc;
-            color: #475569;
-            font-size: 0.78rem;
+            color: #334155;
+            font-size: 0.82rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 700;
             border-top: none;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 12px 16px;
+            border-bottom: 1.5px solid #e2e8f0;
+            padding: 14px 16px;
         }
         .modern-table tbody tr {
             transition: background-color 0.15s;
@@ -182,6 +182,19 @@
             vertical-align: middle;
             border-bottom: 1px solid #f1f5f9;
             font-size: 0.9rem;
+        }
+        .report-list-scroll { max-height: 570px; overflow-y: auto; }
+        .report-list-scroll thead th { position: sticky; top: 0; z-index: 2; }
+        .report-num-badge {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 700;
+            color: #0f766e;
+            background-color: #f0fdfa;
+            border: 1px solid #ccfbf1;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            display: inline-block;
         }
     </style>
 
@@ -216,36 +229,125 @@
         </div>
     @endif
 
-    <!-- Header Section with Clean Academic Year Filter -->
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 pb-2">
-        <div>
-            <h1 class="h3 mb-1 text-gray-900 font-weight-bold" style="letter-spacing: -0.3px;">
-                <i class="fas fa-chart-line text-teal mr-2" style="color: #0f766e;"></i> Dashboard Kemahasiswaan
-            </h1>
-            <p class="text-muted small mb-0">Pusat monitoring, analisis komparatif antar-fakultas, dan verifikasi kasus pelanggaran kampus.</p>
-        </div>
-
-        <!-- Academic Year Dropdown & Add Button (No Semester Dropdown) -->
-        <div class="d-flex align-items-center flex-wrap mt-3 mt-md-0" style="gap: 10px;">
-            <form method="GET" action="{{ route('kemahasiswaan.dashboard') }}" class="m-0 d-flex align-items-center" id="academicYearForm">
-                <div class="position-relative d-flex align-items-center">
-                    <i class="fas fa-calendar-alt position-absolute text-muted" style="left: 14px; z-index: 2; pointer-events: none;"></i>
-                    <select name="academic_year" class="academic-year-select pl-5 shadow-sm" onchange="document.getElementById('academicYearForm').submit()">
-                        <option value="all" {{ $selectedAcademicYear === 'all' ? 'selected' : '' }}>Semua Tahun Akademik</option>
-                        @foreach($academicYears as $ay)
-                            <option value="{{ $ay->year }}" {{ $selectedAcademicYear === $ay->year ? 'selected' : '' }}>
-                                T.A. {{ $ay->year }} {{ $ay->is_active ? '• (Aktif)' : '' }}
-                            </option>
-                        @endforeach
-                    </select>
+    <div class="modal fade" id="modalManageAcademicYears" tabindex="-1" role="dialog" aria-labelledby="manageAcademicYearsTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow" style="border-radius: 14px;">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold" id="manageAcademicYearsTitle"><i class="fas fa-calendar-alt text-primary mr-2"></i>Kelola Tahun Akademik</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                 </div>
-            </form>
+                <div class="modal-body">
+                    <form action="{{ route('kemahasiswaan.academic-years.store') }}" method="POST" class="p-3 mb-3 rounded border" style="background:#f8fafc;">
+                        @csrf
+                        <label class="font-weight-bold small mb-2">Tambah Tahun Akademik Baru</label>
+                        <div class="form-row align-items-center">
+                            <div class="col-sm-8 mb-2 mb-sm-0">
+                                <input type="text" name="year" class="form-control" placeholder="Contoh: {{ $suggestedNextYear }}" value="{{ old('year', $suggestedNextYear) }}" required pattern="\d{4}/\d{4}" title="Format YYYY/YYYY">
+                            </div>
+                            <div class="col-sm-4">
+                                <button type="submit" class="btn btn-teal-primary btn-block"><i class="fas fa-plus-circle mr-1"></i>Tambah & Aktifkan</button>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">Tahun akademik baru langsung menjadi periode aktif untuk laporan berikutnya.</small>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="thead-light"><tr><th>Tahun Akademik</th><th>Status</th><th class="text-right">Aksi</th></tr></thead>
+                            <tbody>
+                                @foreach($academicYears as $ay)
+                                    <tr>
+                                        <td class="align-middle">
+                                            <form method="POST" action="{{ route('kemahasiswaan.academic-years.update', $ay) }}" class="d-flex align-items-center" style="gap:8px;">
+                                                @csrf @method('PUT')
+                                                <input name="year" value="{{ $ay->year }}" class="form-control form-control-sm" required pattern="\\d{4}/\\d{4}" title="Format YYYY/YYYY" style="max-width:150px;">
+                                                <button class="btn btn-sm btn-outline-primary" title="Simpan perubahan"><i class="fas fa-save"></i></button>
+                                            </form>
+                                        </td>
+                                        <td class="align-middle">
+                                            @if($ay->is_active)<span class="badge badge-success">Aktif</span>@else<span class="badge badge-secondary">Arsip</span>@endif
+                                        </td>
+                                        <td class="text-right align-middle">
+                                            <form method="POST" action="{{ route('kemahasiswaan.academic-years.destroy', $ay) }}" class="d-inline" onsubmit="return confirm('Hapus Tahun Akademik {{ $ay->year }}? Tahun yang masih dipakai laporan tidak dapat dihapus.');">
+                                                @csrf @method('DELETE')
+                                                <button class="btn btn-sm btn-outline-danger" title="Hapus"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button></div>
+            </div>
+        </div>
+    </div>
 
-            <!-- Button Tambah Tahun Akademik Baru -->
-            <button type="button" class="btn btn-teal-primary shadow-sm" data-toggle="modal" data-target="#modalAddAcademicYear" title="Tambah Tahun Akademik Selanjutnya">
-                <i class="fas fa-plus-circle"></i>
-                <span>Tahun Akademik Baru</span>
-            </button>
+    <!-- ── Banner Alur SOP (Teal) + Filter Tahun Akademik ── -->
+    <div class="card border-0 text-white shadow-sm mb-4 overflow-hidden sop-banner">
+        <div class="card-body p-4">
+            <!-- Row 1: Judul + Filter TA -->
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3 pb-2 border-bottom" style="border-color: rgba(255,255,255,0.15) !important;">
+                <div class="d-flex align-items-center mb-2 mb-md-0">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mr-3 flex-shrink-0" style="width: 42px; height: 42px; background: rgba(255,255,255,0.2); font-size: 1.1rem;">
+                        <i class="fas fa-route text-white"></i>
+                    </div>
+                    <div>
+                        <h5 class="font-weight-bold text-white mb-0" style="letter-spacing: -0.2px;">Alur Penanganan Pelanggaran Mahasiswa</h5>
+                        <small class="text-white-50">Tahapan resmi verifikasi dan penyelesaian laporan tata tertib mahasiswa di kampus</small>
+                    </div>
+                </div>
+                <!-- Filter Tahun Akademik (moved here, below banner title) -->
+                <div class="d-flex align-items-center flex-wrap mt-2 mt-md-0" style="gap: 8px;">
+                    <form method="GET" action="{{ route('kemahasiswaan.dashboard') }}" class="m-0" id="academicYearForm">
+                        <div class="d-flex align-items-center px-3 py-1 rounded-pill" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);">
+                            <i class="fas fa-calendar-alt text-white-50 mr-2" style="font-size: 0.82rem;"></i>
+                            <select name="academic_year" class="border-0 bg-transparent text-white font-weight-bold" style="font-size: 0.85rem; outline: none; cursor: pointer;" onchange="document.getElementById('academicYearForm').submit()">
+                                <option value="all" style="color:#000;" {{ $selectedAcademicYear === 'all' ? 'selected' : '' }}>Semua Periode</option>
+                                @foreach($academicYears as $ay)
+                                    <option value="{{ $ay->year }}" style="color:#000;" {{ $selectedAcademicYear === $ay->year ? 'selected' : '' }}>
+                                        T.A. {{ $ay->year }}{{ $ay->is_active ? ' (Aktif)' : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </form>
+                    <button type="button" class="btn btn-sm font-weight-bold rounded-pill px-3 py-2 d-flex align-items-center" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color:#fff; font-size: 0.82rem;" data-toggle="modal" data-target="#modalManageAcademicYears">
+                        <i class="fas fa-calendar-alt mr-1"></i> Tahun Akademik
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3 Langkah Alur -->
+            <div class="row text-white">
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <div class="p-3 rounded h-100" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);">
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="rounded-circle font-weight-bold d-inline-flex align-items-center justify-content-center mr-2 flex-shrink-0" style="width: 26px; height: 26px; background: #fff; color: #0d9488; font-size: 0.78rem;">1</span>
+                            <span class="font-weight-bold small text-white">Laporan Masuk</span>
+                        </div>
+                        <p class="mb-0 text-white-50" style="font-size: 0.78rem; line-height: 1.45;">Mahasiswa atau Kemahasiswaan memasukkan data pelanggaran & bukti digital terlapor.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <div class="p-3 rounded h-100" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);">
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="rounded-circle font-weight-bold d-inline-flex align-items-center justify-content-center mr-2 flex-shrink-0" style="width: 26px; height: 26px; background: #fff; color: #0d9488; font-size: 0.78rem;">2</span>
+                            <span class="font-weight-bold small text-white">Verifikasi Data</span>
+                        </div>
+                        <p class="mb-0 text-white-50" style="font-size: 0.78rem; line-height: 1.45;">Bagian Kemahasiswaan memvalidasi identitas terlapor dan keaslian bukti yang diunggah.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded h-100" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);">
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="rounded-circle font-weight-bold d-inline-flex align-items-center justify-content-center mr-2 flex-shrink-0" style="width: 26px; height: 26px; background: #fff; color: #0d9488; font-size: 0.78rem;">3</span>
+                            <span class="font-weight-bold small text-white">Laporan ke Kajur</span>
+                        </div>
+                        <p class="mb-0 text-white-50" style="font-size: 0.78rem; line-height: 1.45;">Laporan yang terverifikasi otomatis masuk ke akun Ketua Jurusan terkait untuk ditindaklanjuti.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -257,20 +359,20 @@
                     <i class="fas fa-bell fa-lg"></i>
                 </div>
                 <div>
-                    <h6 class="font-weight-bold mb-0 text-dark">Terdapat {{ $pendingCount }} Laporan Baru Menunggu Verifikasi</h6>
-                    <small class="text-muted">Periksa kesesuaian identitas terlapor dan bukti digital sebelum diteruskan ke Ketua Jurusan.</small>
+                    <h6 class="font-weight-bold mb-0 text-dark">Terdapat {{ $pendingCount }} Laporan Baru Belum Diverifikasi</h6>
+                    <small class="text-muted">Periksa kesesuaian identitas terlapor dan bukti digital sebelum diteruskan ke pimpinan terkait.</small>
                 </div>
             </div>
-            <a href="{{ route('reports.index', ['status' => 'pending']) }}" class="btn btn-sm font-weight-bold px-3 py-2 text-dark shadow-sm" style="background: #fde68a; border-radius: 8px;">
+            <a href="{{ route('reports.inbox') }}" class="btn btn-sm font-weight-bold px-3 py-2 text-dark shadow-sm" style="background: #fde68a; border-radius: 8px;">
                 Buka Inbox Verifikasi <i class="fas fa-arrow-right ml-1"></i>
             </a>
         </div>
     @endif
 
-    <!-- 4 KPI Stat Cards Row -->
+    <!-- 3 KPI Stat Cards Row (Sederhana & Sesuai Permintaan) -->
     <div class="row mb-4">
         <!-- 1. Total Laporan -->
-        <div class="col-xl-3 col-sm-6 mb-3 mb-xl-0">
+        <div class="col-md-4 mb-3 mb-md-0">
             <div class="card feature-card h-100 p-3">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
@@ -288,86 +390,40 @@
         </div>
 
         <!-- 2. Menunggu Verifikasi -->
-        <div class="col-xl-3 col-sm-6 mb-3 mb-xl-0">
-            <div class="card feature-card h-100 p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">Perlu Verifikasi</div>
-                        <div class="h3 mb-0 font-weight-bold text-amber-600" style="color: #d97706;">{{ $pendingCount }}</div>
-                        <small class="text-muted">Menunggu tinjauan staf</small>
-                    </div>
-                    <div class="metric-icon-box" style="background: #fffbeb; color: #d97706;">
-                        <i class="fas fa-hourglass-half fa-lg"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. Dikonfirmasi ke Kajur -->
-        <div class="col-xl-3 col-sm-6 mb-3 mb-xl-0">
-            <div class="card feature-card h-100 p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">Penanganan Kajur</div>
-                        <div class="h3 mb-0 font-weight-bold text-blue-600" style="color: #0284c7;">{{ $confirmedCount + $inProgressCount }}</div>
-                        <small class="text-muted">Proses klarifikasi & sidang</small>
-                    </div>
-                    <div class="metric-icon-box" style="background: #f0f9ff; color: #0284c7;">
-                        <i class="fas fa-user-shield fa-lg"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. Selesai Tindak Lanjut -->
-        <div class="col-xl-3 col-sm-6 mb-3 mb-xl-0">
-            <div class="card feature-card h-100 p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">Selesai Ditindak</div>
-                        <div class="h3 mb-0 font-weight-bold text-teal-600" style="color: #0d9488;">{{ $completedCount }}</div>
-                        <small class="text-muted">Sanksi / pembinaan tuntas</small>
-                    </div>
-                    <div class="metric-icon-box" style="background: #f0fdf4; color: #059669;">
-                        <i class="fas fa-check-double fa-lg"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================================
-         BAGIAN UTAMA: FAKULTAS TERLEBIH DAHULU & GRAFIK PELANGGARAN
-         ======================================================== -->
-
-    <!-- Quick Summary Cards Antar-Fakultas -->
-    <div class="row mb-4">
-        @foreach($facultyCounts as $facName => $count)
-            @php
-                $stat = $facultyStats[$facName];
-                $percent = $totalReports > 0 ? round(($count / $totalReports) * 100, 1) : 0;
-            @endphp
-            <div class="col-md-4 mb-3 mb-md-0">
-                <div class="card feature-card h-100 p-3" style="cursor: pointer;" onclick="switchToFacultyTab('{{ Str::slug($facName) }}')">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="d-flex align-items-center">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center mr-2" style="width: 36px; height: 36px; background: #f0fdfa; color: #0f766e;">
-                                <i class="fas fa-university"></i>
-                            </div>
-                            <span class="font-weight-bold text-dark" style="font-size: 0.95rem;">{{ $facName }}</span>
+        <div class="col-md-4 mb-3 mb-md-0">
+            <a href="{{ route('reports.inbox') }}" class="text-decoration-none">
+                <div class="card feature-card h-100 p-3" style="transition: transform 0.2s, box-shadow 0.2s;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">Menunggu Verifikasi</div>
+                            <div class="h3 mb-0 font-weight-bold text-amber-600" style="color: #d97706;">{{ $pendingCount }}</div>
+                            <small class="text-muted">Buka Inbox Verifikasi <i class="fas fa-arrow-right ml-1"></i></small>
                         </div>
-                        <span class="badge badge-subtle-teal">{{ $count }} Kasus</span>
-                    </div>
-                    <div class="d-flex align-items-center justify-content-between text-xs text-muted mt-2">
-                        <span>Porsi: <strong>{{ $percent }}%</strong></span>
-                        <span>Ringan: {{ $stat['ringan'] }} | Sedang: {{ $stat['sedang'] }} | Berat: {{ $stat['berat'] }}</span>
-                    </div>
-                    <div class="progress mt-2" style="height: 6px; border-radius: 6px; background-color: #f1f5f9;">
-                        <div class="progress-bar" role="progressbar" style="width: {{ $percent }}%; background: #0f766e;" aria-valuenow="{{ $percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="metric-icon-box" style="background: #fffbeb; color: #d97706;">
+                            <i class="fas fa-hourglass-half fa-lg"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
-        @endforeach
+            </a>
+        </div>
+
+        <!-- 3. Terverifikasi (Riwayat Laporan) -->
+        <div class="col-md-4">
+            <a href="{{ route('reports.history') }}" class="text-decoration-none">
+                <div class="card feature-card h-100 p-3" style="transition: transform 0.2s, box-shadow 0.2s;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">Riwayat Terverifikasi</div>
+                            <div class="h3 mb-0 font-weight-bold text-emerald-600" style="color: #059669;">{{ $verifiedCount }}</div>
+                            <small class="text-muted">Lihat Riwayat Laporan <i class="fas fa-arrow-right ml-1"></i></small>
+                        </div>
+                        <div class="metric-icon-box" style="background: #ecfdf5; color: #059669;">
+                            <i class="fas fa-history fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
     </div>
 
     <!-- Charts Row: 1. Grafik Pelanggaran Antar-Fakultas & 2. Donut Proporsi Kategori -->
@@ -378,15 +434,19 @@
                 <div class="card-header py-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between">
                     <div>
                         <h6 class="m-0 font-weight-bold text-dark" style="font-size: 1.05rem;">
-                            <i class="fas fa-chart-bar text-teal mr-2" style="color: #0f766e;"></i> Peringkat Pelanggaran Antar-Fakultas
+                            <i class="fas fa-chart-bar text-teal mr-2" style="color: #0d9488;"></i> Peringkat Pelanggaran Antar-Fakultas
                         </h6>
-                        <small class="text-muted">Grafik frekuensi fakultas yang paling sering melakukan pelanggaran (urutan tertinggi).</small>
+                        <small class="text-muted">Frekuensi pelanggaran per fakultas (tertinggi ke terendah).</small>
                     </div>
-                    <span class="badge badge-subtle-gray">Kumulatif Fakultas</span>
+                    <button type="button" class="btn btn-sm btn-light border font-weight-bold px-2 py-1"
+                            id="expandFacBarBtn"
+                            style="font-size: 0.75rem; border-radius: 8px; color: #0d9488;">
+                        <i class="fas fa-expand-alt"></i> Perbesar
+                    </button>
                 </div>
                 <div class="card-body p-4">
                     <div style="position: relative; height: 300px;">
-                        <canvas id="facultyBarChart"></canvas>
+                        <canvas id="facultyBarChart" onclick="document.getElementById('expandFacBarBtn').click()" style="cursor: pointer;" title="Klik untuk memperbesar grafik"></canvas>
                     </div>
                 </div>
             </div>
@@ -395,14 +455,11 @@
         <!-- Grafik 2: Proporsi Tingkat Keparahan (Donut Chart) -->
         <div class="col-xl-4 col-lg-5">
             <div class="card section-card h-100 overflow-hidden">
-                <div class="card-header py-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between">
-                    <div>
-                        <h6 class="m-0 font-weight-bold text-dark" style="font-size: 1.05rem;">
-                            <i class="fas fa-chart-pie mr-2 text-warning"></i> Kategori Pelanggaran
-                        </h6>
-                        <small class="text-muted">Proporsi tingkat keparahan kasus.</small>
-                    </div>
-                    <span class="badge badge-subtle-gray">Ringan / Sedang / Berat</span>
+                <div class="card-header py-3 px-4 bg-white border-bottom">
+                    <h6 class="m-0 font-weight-bold text-dark" style="font-size: 1.05rem;">
+                        <i class="fas fa-chart-pie mr-2 text-warning"></i> Kategori Pelanggaran
+                    </h6>
+                    <small class="text-muted">Proporsi tingkat keparahan kasus</small>
                 </div>
                 <div class="card-body p-4 d-flex flex-column align-items-center justify-content-center">
                     <div style="position: relative; height: 210px; width: 100%;">
@@ -485,21 +542,26 @@
                             <!-- Grafik Perbandingan Antar Prodi / Jurusan dalam Fakultas Ini -->
                             <div class="col-lg-7 mb-3 mb-lg-0">
                                 <div class="p-3 rounded-lg border bg-white h-100">
-                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
                                         <h6 class="font-weight-bold text-dark mb-0 small text-uppercase">
-                                            <i class="fas fa-chart-column mr-1 text-teal" style="color: #0f766e;"></i> Distribusi Kasus per Jurusan / Program Studi
+                                            <i class="fas fa-chart-bar mr-1" style="color: #0d9488;"></i> Distribusi Kasus per Jurusan
                                         </h6>
-                                        <span class="badge badge-subtle-gray">{{ count($stats['departments']) }} Program Studi</span>
+                                        <button type="button" class="btn btn-sm btn-light border font-weight-bold px-2 py-1"
+                                                id="expandDeptBtn_{{ $slug }}"
+                                                style="font-size: 0.75rem; border-radius: 8px; color: #0d9488;">
+                                            <i class="fas fa-expand-alt mr-1"></i> Perbesar
+                                        </button>
                                     </div>
-                                    <div style="position: relative; height: 190px;">
-                                        <canvas id="deptChart_{{ $slug }}"></canvas>
+                                    @php $chartItems = array_slice($stats['deptBreakdown'], 0, 5, true); $deptCount = count($chartItems); $chartH = max(180, $deptCount * 42); @endphp
+                                    <div style="position: relative; height: {{ $chartH }}px;">
+                                        <canvas id="deptChart_{{ $slug }}" style="cursor: pointer;" title="Klik untuk memperbesar grafik"></canvas>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Statistik Status & Tingkat Keparahan di Fakultas Ini -->
                             <div class="col-lg-5">
-                                <div class="p-3 rounded-lg border bg-white h-100 d-flex flex-column justify-content-between">
+                                <div class="p-3 rounded-lg border bg-white shadow-sm mb-3">
                                     <h6 class="font-weight-bold text-dark mb-3 small text-uppercase">
                                         <i class="fas fa-layer-group mr-1 text-teal" style="color: #0f766e;"></i> Ringkasan Status & Keparahan
                                     </h6>
@@ -520,19 +582,15 @@
                                         </div>
                                     </div>
 
-                                    <!-- Status Progress Breakdown -->
+                                    <!-- Status Verifikasi Sederhana (Hanya Menunggu & Terverifikasi) -->
                                     <div class="pt-2 border-top">
-                                        <div class="d-flex align-items-center justify-content-between small mb-1">
+                                        <div class="d-flex align-items-center justify-content-between small mb-2">
                                             <span class="text-muted"><i class="fas fa-clock mr-1 text-warning"></i> Menunggu Verifikasi:</span>
-                                            <span class="font-weight-bold">{{ $stats['pending'] }} Kasus</span>
-                                        </div>
-                                        <div class="d-flex align-items-center justify-content-between small mb-1">
-                                            <span class="text-muted"><i class="fas fa-spinner mr-1 text-info"></i> Dalam Penanganan Kajur:</span>
-                                            <span class="font-weight-bold">{{ $stats['diproses'] }} Kasus</span>
+                                            <span class="badge badge-warning px-2.5 py-1 text-dark font-weight-bold" style="background: #fef3c7; color: #b45309; border-radius: 6px;">{{ $stats['pending'] }} Kasus</span>
                                         </div>
                                         <div class="d-flex align-items-center justify-content-between small">
-                                            <span class="text-muted"><i class="fas fa-check-circle mr-1 text-success"></i> Selesai Ditindak:</span>
-                                            <span class="font-weight-bold">{{ $stats['selesai'] }} Kasus</span>
+                                            <span class="text-muted"><i class="fas fa-check-circle mr-1" style="color: #0d9488;"></i> Terverifikasi:</span>
+                                            <span class="badge font-weight-bold px-2.5 py-1" style="background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; border-radius: 6px;">{{ $stats['verified'] }} Kasus</span>
                                         </div>
                                     </div>
                                 </div>
@@ -557,60 +615,69 @@
                                 </div>
                             </div>
 
-                            <div class="table-responsive">
+                            <div class="table-responsive report-list-scroll">
                                 <table class="table modern-table mb-0" id="table_{{ $slug }}">
                                     <thead>
                                         <tr>
-                                            <th>No. Laporan</th>
+                                            <th style="width: 170px;">No. Laporan</th>
+                                            <th style="width: 130px;">Tgl Kejadian</th>
                                             <th>Mahasiswa Terlapor</th>
                                             <th>Program Studi</th>
-                                            <th>Tgl Kejadian</th>
-                                            <th>Kategori</th>
-                                            <th>Status Kasus</th>
-                                            <th class="text-center">Aksi</th>
+                                            <th style="width: 110px;" class="text-center">Kategori</th>
+                                            <th style="width: 180px;" class="text-center">Status</th>
+                                            <th style="width: 110px;" class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($reports as $rep)
+                                        @forelse($reports->take(10) as $rep)
                                             <tr>
-                                                <td class="font-weight-bold" style="color: #0f766e;">
-                                                    {{ $rep->report_number }}
+                                                <td>
+                                                    <span class="report-num-badge">
+                                                        {{ $rep->report_number }}
+                                                    </span>
+                                                    @if($rep->evidence_path)
+                                                        <span class="text-muted ml-1" title="Terdapat berkas bukti"><i class="fas fa-paperclip text-info" style="font-size: 0.8rem;"></i></span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-muted" style="white-space: nowrap;">
+                                                    <i class="fas fa-calendar-alt text-muted mr-1"></i>
+                                                    {{ $rep->incident_date ? $rep->incident_date->format('d M Y') : '-' }}
                                                 </td>
                                                 <td>
                                                     <div class="font-weight-bold text-dark">{{ $rep->student_name }}</div>
-                                                    <small class="text-muted">NIM: {{ $rep->student_nim }}</small>
+                                                    <div class="text-xs text-muted font-weight-bold">NIM: {{ $rep->student_nim }}</div>
                                                 </td>
                                                 <td>
-                                                    <span class="badge badge-subtle-gray">{{ $rep->department_name }}</span>
+                                                    <span class="badge badge-light border text-dark font-weight-bold px-2 py-1" style="font-size: 0.82rem;">
+                                                        {{ $rep->department_name }}
+                                                    </span>
                                                 </td>
-                                                <td class="text-muted small">
-                                                    {{ $rep->incident_date ? $rep->incident_date->format('d/m/Y') : '-' }}
+                                                <td class="text-center">
+                                                    @php
+                                                        $sevStyle = match($rep->severity) {
+                                                            'Berat'  => 'background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2;',
+                                                            'Sedang' => 'background: #fffbeb; color: #b45309; border: 1px solid #fef3c7;',
+                                                            default  => 'background: #ecfdf5; color: #059669; border: 1px solid #d1fae5;',
+                                                        };
+                                                    @endphp
+                                                    <span class="badge px-2.5 py-1 font-weight-bold" style="{{ $sevStyle }} border-radius: 8px;">
+                                                        {{ $rep->severity ?? 'Ringan' }}
+                                                    </span>
                                                 </td>
-                                                <td>
-                                                    @if($rep->severity === 'Berat')
-                                                        <span class="badge badge-subtle-rose">Berat</span>
-                                                    @elseif($rep->severity === 'Sedang')
-                                                        <span class="badge badge-subtle-amber">Sedang</span>
-                                                    @else
-                                                        <span class="badge badge-subtle-teal">Ringan</span>
-                                                    @endif
-                                                </td>
-                                                <td>
+                                                <td class="text-center">
                                                     @if(in_array($rep->status, ['pending', 'dilaporkan']))
-                                                        <span class="badge badge-subtle-amber">Menunggu Verifikasi</span>
-                                                    @elseif(in_array($rep->status, ['dikonfirmasi', 'diproses', 'sedang_diproses', 'diverifikasi_kaprodi']))
-                                                        <span class="badge badge-subtle-blue">Dalam Penanganan</span>
-                                                    @elseif(in_array($rep->status, ['selesai', 'sanksi_ditetapkan']))
-                                                        <span class="badge badge-subtle-teal">Selesai</span>
-                                                    @elseif($rep->status === 'ditolak')
-                                                        <span class="badge badge-subtle-rose">Ditolak</span>
+                                                        <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; border-radius: 8px; font-size: 0.78rem;">
+                                                            <i class="fas fa-hourglass-half mr-1"></i> Menunggu Verifikasi
+                                                        </span>
                                                     @else
-                                                        <span class="badge badge-subtle-gray">{{ $rep->status_label }}</span>
+                                                        <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; border-radius: 8px; font-size: 0.78rem;">
+                                                            <i class="fas fa-check-circle mr-1"></i> Terverifikasi
+                                                        </span>
                                                     @endif
                                                 </td>
                                                 <td class="text-center">
-                                                    <a href="{{ route('reports.show', $rep->id) }}" class="btn btn-sm btn-outline-secondary font-weight-bold px-3 py-1" style="border-radius: 8px; font-size: 0.8rem;">
-                                                        <i class="fas fa-eye mr-1"></i> Detail
+                                                    <a href="{{ route('reports.show', ['id' => $rep->id, 'return_to' => request()->getRequestUri()]) }}" class="btn btn-sm btn-outline-secondary font-weight-bold px-3 py-1.5" style="border-radius: 8px; font-size: 0.82rem;" title="Lihat Detail">
+                                                        Detail
                                                     </a>
                                                 </td>
                                             </tr>
@@ -626,68 +693,14 @@
                                     </tbody>
                                 </table>
                             </div>
+                            @if($reports->count() > 10)
+                                <div class="px-3 py-2 border-top small text-muted">Menampilkan 10 dari {{ $reports->count() }} laporan. Gulir untuk melihat data lainnya.</div>
+                            @endif
                         </div>
 
                     </div>
                     @php $isFirstPane = false; @endphp
                 @endforeach
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================================
-         MODAL TAMBAH TAHUN AKADEMIK BARU
-         ======================================================== -->
-    <div class="modal fade" id="modalAddAcademicYear" tabindex="-1" role="dialog" aria-labelledby="modalAddAcademicYearTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 18px; overflow: hidden;">
-                <div class="modal-header px-4 py-3 bg-white border-bottom">
-                    <div class="d-flex align-items-center">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center mr-3" style="width: 40px; height: 40px; background: #f0fdfa; color: #0f766e;">
-                            <i class="fas fa-calendar-plus fa-lg"></i>
-                        </div>
-                        <div>
-                            <h5 class="modal-title font-weight-bold text-dark" id="modalAddAcademicYearTitle" style="font-size: 1.15rem;">Tambah Tahun Akademik Baru</h5>
-                            <small class="text-muted">Buka periode akademik baru untuk pendataan laporan.</small>
-                        </div>
-                    </div>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <form action="{{ route('kemahasiswaan.academic-years.store') }}" method="POST">
-                    @csrf
-                    <div class="modal-body px-4 py-4">
-                        <div class="form-group mb-3">
-                            <label class="font-weight-bold text-dark small mb-2">Tahun Akademik Selanjutnya <span class="text-danger">*</span></label>
-                            <input type="text" 
-                                   name="year" 
-                                   class="form-control form-control-lg" 
-                                   placeholder="Contoh: {{ $suggestedNextYear }}" 
-                                   value="{{ old('year', $suggestedNextYear) }}" 
-                                   required 
-                                   pattern="\d{4}/\d{4}" 
-                                   title="Format harus YYYY/YYYY (contoh: {{ $suggestedNextYear }})"
-                                   style="border-radius: 10px; font-size: 1.05rem; font-weight: 600;">
-                            <small class="text-muted mt-1 d-block">Gunakan format 4 digit tahun / 4 digit tahun (contoh: <strong>{{ $suggestedNextYear }}</strong>).</small>
-                        </div>
-
-                        <div class="p-3 rounded-lg mb-2" style="background-color: #f0fdfa; border: 1px solid #ccfbf1;">
-                            <div class="d-flex">
-                                <i class="fas fa-info-circle fa-lg mr-2 mt-1" style="color: #0f766e;"></i>
-                                <div class="small" style="color: #134e4a; line-height: 1.5;">
-                                    <strong>Otomatisasi Laporan Baru:</strong> Ketika tahun akademik baru ini ditambahkan, sistem akan langsung menjadikannya sebagai <strong>Tahun Akademik Aktif</strong>. Semua laporan pelanggaran yang baru masuk akan otomatis dicatat ke tahun akademik ini.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer px-4 py-3 bg-light border-top">
-                        <button type="button" class="btn btn-secondary font-weight-bold px-3 py-2" data-dismiss="modal" style="border-radius: 8px;">Batal</button>
-                        <button type="submit" class="btn btn-teal-primary px-4 py-2">
-                            <i class="fas fa-save mr-1"></i> Simpan & Aktifkan
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
@@ -708,15 +721,16 @@
             const facCtx = document.getElementById('facultyBarChart').getContext('2d');
             const facLabels = {!! json_encode(array_keys($facultyCounts)) !!};
             const facData = {!! json_encode(array_values($facultyCounts)) !!};
+            const facColors = ['#0d9488', '#0891b2', '#d97706', '#7c3aed', '#64748b'];
 
-            new Chart(facCtx, {
+            const facChartInst = new Chart(facCtx, {
                 type: 'bar',
                 data: {
                     labels: facLabels,
                     datasets: [{
                         label: 'Total Kasus Pelanggaran',
                         data: facData,
-                        backgroundColor: ['#0f766e', '#0284c7', '#d97706', '#64748b'],
+                        backgroundColor: facColors,
                         borderRadius: 8,
                         barThickness: 36,
                     }]
@@ -724,18 +738,17 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: { duration: 900, easing: 'easeOutQuart' },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: {
-                                stepSize: 1,
-                                font: { size: 12, family: 'Inter, sans-serif' }
-                            },
+                            ticks: { stepSize: 1, font: { size: 12 } },
                             grid: { color: '#f1f5f9' }
                         },
                         x: {
                             ticks: {
-                                font: { size: 12, weight: '600', family: 'Inter, sans-serif' },
+                                autoSkip: false,
+                                font: { size: 12, weight: '600' },
                                 color: '#1e293b'
                             },
                             grid: { display: false }
@@ -753,6 +766,20 @@
                     }
                 }
             });
+
+            // Expand button & click for faculty bar chart
+            const expandFacBtn = document.getElementById('expandFacBarBtn');
+            if (expandFacBtn) {
+                expandFacBtn.addEventListener('click', function() {
+                    openChartModal(
+                        'Peringkat Pelanggaran Antar-Fakultas',
+                        'bar',
+                        facLabels,
+                        [{ label: 'Total Kasus Pelanggaran', data: facData, backgroundColor: facColors, borderRadius: 8 }],
+                        { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { autoSkip: false } } }, plugins: { legend: { display: false } } }
+                    );
+                });
+            }
 
             // 2. Chart Donut: Kategori Pelanggaran (Ringan, Sedang, Berat)
             const sevCtx = document.getElementById('severityDonutChart').getContext('2d');
@@ -777,6 +804,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: { duration: 900, easing: 'easeOutQuart' },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -791,15 +819,43 @@
                 }
             });
 
+            // Klik diagram donut untuk memperbesar grafik
+            const sevCanvas = document.getElementById('severityDonutChart');
+            const openSevModal = function() {
+                openChartModal(
+                    'Proporsi Kategori Tingkat Keparahan Kasus',
+                    'doughnut',
+                    ['Ringan', 'Sedang', 'Berat'],
+                    [{
+                        data: sevData,
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }],
+                    { plugins: { legend: { position: 'bottom' } }, cutout: '65%' }
+                );
+            };
+            if (sevCanvas) {
+                sevCanvas.style.cursor = 'pointer';
+                sevCanvas.title = 'Klik untuk memperbesar grafik';
+                sevCanvas.addEventListener('click', openSevModal);
+            }
+
             // 3. Mini Charts untuk Masing-masing Fakultas di Tab Panes
             @foreach($facultyStats as $facName => $stats)
-                @php $slug = Str::slug($facName); @endphp
+                @php
+                    $slug = Str::slug($facName);
+                    $chartItems = array_slice($stats['deptBreakdown'], 0, 5, true);
+                @endphp
                 (function() {
                     const canvasEl = document.getElementById('deptChart_{{ $slug }}');
                     if (canvasEl) {
                         const ctx = canvasEl.getContext('2d');
-                        const labels = {!! json_encode(array_keys($stats['deptBreakdown'])) !!};
-                        const data = {!! json_encode(array_values($stats['deptBreakdown'])) !!};
+                        const labels = {!! json_encode(array_keys($chartItems)) !!};
+                        const data   = {!! json_encode(array_values($chartItems)) !!};
+
+                        // Ringkasan hanya menampilkan lima jurusan teratas.
+                        canvasEl.parentElement.style.height = Math.max(180, labels.length * 42) + 'px';
 
                         new Chart(ctx, {
                             type: 'bar',
@@ -810,13 +866,14 @@
                                     data: data,
                                     backgroundColor: '#0d9488',
                                     borderRadius: 6,
-                                    barThickness: 24,
+                                    barThickness: 20,
                                 }]
                             },
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: false,
-                                indexAxis: 'y', // Horizontal bar for clean department view
+                            indexAxis: 'y',
+                            animation: { duration: 900, easing: 'easeOutQuart' },
                                 scales: {
                                     x: {
                                         beginAtZero: true,
@@ -825,20 +882,51 @@
                                     },
                                     y: {
                                         ticks: {
-                                            font: { size: 11, weight: '600' },
+                                            autoSkip: false,
+                                            font: { size: 10, weight: '600' },
                                             color: '#334155'
                                         },
                                         grid: { display: false }
                                     }
                                 },
-                                plugins: {
-                                    legend: { display: false }
-                                }
+                                plugins: { legend: { display: false } }
                             }
                         });
+
+                        const allLabels = {!! json_encode(array_keys($stats['deptBreakdown'])) !!};
+                        const allData = {!! json_encode(array_values($stats['deptBreakdown'])) !!};
+                        // Expand Modal Handler shows every department.
+                        const openModalHandler = function() {
+                            openChartModal(
+                                'Distribusi Kasus per Jurusan — {{ addslashes($facName) }}',
+                                'bar',
+                                allLabels,
+                                [{
+                                    label: 'Jumlah Kasus',
+                                    data: allData,
+                                    backgroundColor: '#0d9488',
+                                    borderRadius: 6
+                                }],
+                                { indexAxis: 'y', animation: { duration: 900, easing: 'easeOutQuart' }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } }, y: { ticks: { autoSkip: false, font: { size: 12, weight: '600' } } } }, plugins: { legend: { display: false } } }
+                            );
+                        };
+
+                        const expandBtn = document.getElementById('expandDeptBtn_{{ $slug }}');
+                        if (expandBtn) {
+                            expandBtn.addEventListener('click', openModalHandler);
+                        }
+                        canvasEl.style.cursor = 'pointer';
+                        canvasEl.addEventListener('click', openModalHandler);
                     }
                 })();
             @endforeach
+
+            // Trigger window resize when switching tabs so hidden canvases compute proper size
+            if (window.jQuery) {
+                jQuery('button[data-toggle="tab"]').on('shown.bs.tab', function () {
+                    window.dispatchEvent(new Event('resize'));
+                });
+            }
 
             // 4. Live Search Filter untuk Tabel Laporan Fakultas
             document.querySelectorAll('.table-search-input').forEach(function(input) {
@@ -862,3 +950,4 @@
         });
     </script>
 </x-layout>
+

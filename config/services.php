@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Bridge API v2 (eCampuz Integration)
+    |--------------------------------------------------------------------------
+    | Digunakan untuk autentikasi mahasiswa via portal eCampuz.
+    | URL dapat dikonfigurasi melalui BRIDGE_API_URL di .env
+    */
+    'bridge_api' => [
+        'url'     => env('BRIDGE_API_URL', 'https://bridge.uinssc.ac.id'),
+        'timeout' => env('BRIDGE_API_TIMEOUT', 5),
+    ],
+
 ];

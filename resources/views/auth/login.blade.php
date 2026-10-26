@@ -16,19 +16,19 @@
 
     <style>
         :root {
-            --primary: #0284c7;
-            --primary-dark: #0369a1;
-            --primary-light: #e0f2fe;
-            --primary-gradient: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-            --accent-cyan: #38bdf8;
+            --primary: #0d9488;
+            --primary-dark: #0f766e;
+            --primary-light: #ccfbf1;
+            --primary-gradient: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+            --accent-cyan: #14b8a6;
             --surface: #ffffff;
             --bg-page: #f8fafc;
             --text-heading: #0f172a;
             --text-body: #475569;
             --text-muted: #94a3b8;
             --border-color: #e2e8f0;
-            --shadow-card: 0 20px 40px -15px rgba(2, 132, 199, 0.12), 0 0 0 1px rgba(226, 232, 240, 0.8);
-            --shadow-hover: 0 25px 50px -12px rgba(2, 132, 199, 0.2);
+            --shadow-card: 0 20px 40px -15px rgba(13, 148, 136, 0.12), 0 0 0 1px rgba(226, 232, 240, 0.8);
+            --shadow-hover: 0 25px 50px -12px rgba(13, 148, 136, 0.2);
         }
 
         *, *::before, *::after {
@@ -46,15 +46,16 @@
             display: flex;
             flex-direction: column;
             background-image: 
-                radial-gradient(circle at 10% 15%, rgba(56, 189, 248, 0.08) 0%, transparent 45%),
-                radial-gradient(circle at 90% 85%, rgba(2, 132, 199, 0.08) 0%, transparent 45%);
+                radial-gradient(circle at 10% 15%, rgba(20, 184, 166, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 90% 85%, rgba(13, 148, 136, 0.08) 0%, transparent 45%);
         }
 
         /* Top Navbar - Responsive */
         .top-navbar {
-            background: linear-gradient(90deg, #0284c7 0%, #0369a1 100%);
+            background: #ffffff;
             padding: 12px 20px;
-            box-shadow: 0 4px 20px rgba(2, 132, 199, 0.18);
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
             position: relative;
             z-index: 10;
         }
@@ -69,27 +70,21 @@
             text-decoration: none !important;
         }
         .brand-logo-icon {
-            background: #ffffff;
-            color: var(--primary);
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-            margin-right: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            display: block;
+            width: clamp(140px, 24vw, 200px);
+            height: auto;
+            aspect-ratio: 1737 / 688;
+            object-fit: contain;
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
             flex-shrink: 0;
             transition: transform 0.2s ease;
         }
         @media (min-width: 768px) {
             .brand-logo-icon {
-                width: 44px;
-                height: 44px;
-                border-radius: 12px;
-                font-size: 1.35rem;
-                margin-right: 14px;
+                height: auto;
             }
         }
         .brand-logo-container:hover .brand-logo-icon {
@@ -103,21 +98,21 @@
             line-height: 1.1;
         }
         .brand-sub {
-            color: #e0f2fe;
+            color: #ccfbf1;
             font-size: clamp(0.62rem, 1.8vw, 0.72rem);
             font-weight: 600;
             letter-spacing: 0.8px;
             text-transform: uppercase;
         }
         .nav-status-badge {
-            background: rgba(255, 255, 255, 0.15);
-            color: #ffffff;
+            background: #f0fdfa;
+            color: #0f766e;
             font-size: 0.76rem;
             font-weight: 600;
             padding: 5px 12px;
             border-radius: 30px;
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
+            border: 1px solid #ccfbf1;
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -160,8 +155,8 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #e0f2fe;
-            color: #0369a1;
+            background: #ccfbf1;
+            color: #0f766e;
             font-size: 0.75rem;
             font-weight: 700;
             letter-spacing: 0.6px;
@@ -179,7 +174,7 @@
             margin-bottom: 12px;
         }
         .section-title .text-highlight {
-            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -240,7 +235,7 @@
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        .badge-cyan { background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); }
+        .badge-cyan { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
         .badge-coral { background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%); }
         .badge-gold { background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
         .badge-emerald { background: linear-gradient(135deg, #34d399 0%, #059669 100%); }
@@ -285,7 +280,7 @@
         /* Top decorative gradient bar */
         .login-card-top-bar {
             height: 5px;
-            background: linear-gradient(90deg, #0284c7 0%, #38bdf8 50%, #0369a1 100%);
+            background: linear-gradient(90deg, #0d9488 0%, #14b8a6 50%, #0f766e 100%);
         }
 
         .login-card-header {
@@ -301,8 +296,8 @@
             width: 52px;
             height: 52px;
             border-radius: 16px;
-            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-            color: #0284c7;
+            background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%);
+            color: #0d9488;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -365,7 +360,7 @@
             min-height: 48px;
         }
         .input-group-modern:focus-within {
-            border-color: #0284c7;
+            border-color: #0d9488;
             box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
             background: #ffffff;
         }
@@ -380,7 +375,7 @@
             transition: color 0.2s ease;
         }
         .input-group-modern:focus-within .input-icon {
-            color: #0284c7;
+            color: #0d9488;
         }
         .input-field-modern {
             border: none;
@@ -418,7 +413,7 @@
             transition: color 0.2s ease;
         }
         .btn-toggle-eye:hover {
-            color: #0284c7;
+            color: #0d9488;
         }
 
         /* Custom Remember Me Checkbox */
@@ -429,7 +424,7 @@
             user-select: none;
         }
         .remember-checkbox-wrapper input[type="checkbox"] {
-            accent-color: #0284c7;
+            accent-color: #0d9488;
             width: 17px;
             height: 17px;
             margin-right: 8px;
@@ -448,7 +443,7 @@
 
         /* Modern Submit Button */
         .btn-login-submit {
-            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
             color: #ffffff;
             font-weight: 700;
             font-size: 0.95rem;
@@ -492,7 +487,7 @@
             flex-wrap: wrap;
         }
         .login-secure-footer i {
-            color: #0284c7;
+            color: #0d9488;
             font-size: 0.85rem;
         }
 
@@ -521,7 +516,7 @@
 
         /* Bottom Banner - Responsive */
         .bottom-banner {
-            background: linear-gradient(135deg, #0284c7 0%, #075985 100%);
+            background: linear-gradient(135deg, #0d9488 0%, #134e4a 100%);
             color: #ffffff;
             padding: 30px 20px;
             text-align: center;
@@ -543,7 +538,99 @@
             margin: 0 auto;
             font-size: clamp(0.8rem, 1.5vw, 0.88rem);
             line-height: 1.65;
-            color: #e0f2fe;
+            color: #ccfbf1;
+        }
+
+        /* =========================================================
+           CAPTCHA WIDGET (reCAPTCHA Style)
+           ========================================================= */
+        .recaptcha-box {
+            background-color: #f9f9f9;
+            border: 1px solid #d3d3d3;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 320px;
+            height: 74px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            user-select: none;
+        }
+        .recaptcha-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+        .recaptcha-checkbox {
+            width: 26px;
+            height: 26px;
+            border: 2px solid #c1c1c1;
+            border-radius: 3px;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .recaptcha-checkbox:hover {
+            border-color: #b2b2b2;
+        }
+        .recaptcha-checkbox.checked {
+            border-color: #0f9d58;
+            background-color: #0f9d58;
+        }
+        .recaptcha-checkbox.checked i {
+            color: #ffffff;
+            font-size: 14px;
+            display: block;
+        }
+        .recaptcha-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #222;
+            margin: 0;
+            cursor: pointer;
+        }
+        .recaptcha-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+        }
+        .recaptcha-logo-icon {
+            width: 32px;
+            height: 32px;
+        }
+        .recaptcha-brand-text {
+            font-size: 10px;
+            color: #555;
+            font-family: Roboto, helvetica, arial, sans-serif;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            margin-top: 1px;
+        }
+        .recaptcha-links {
+            font-size: 8px;
+            color: #555;
+            display: flex;
+            gap: 4px;
+        }
+        .recaptcha-links a {
+            color: #555;
+            text-decoration: none;
+        }
+        .recaptcha-hint-text {
+            font-size: 0.82rem;
+            color: #a30000;
+            font-style: italic;
+            margin-top: 6px;
+            font-weight: 600;
+            display: block;
         }
     </style>
 </head>
@@ -553,13 +640,7 @@
     <header class="top-navbar">
         <div class="d-flex align-items-center justify-content-between mx-auto" style="max-width: 1240px;">
             <a href="{{ url('/') }}" class="brand-logo-container">
-                <div class="brand-logo-icon">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <div>
-                    <div class="brand-name">SIPMA</div>
-                    <div class="brand-sub">Sistem Pendataan Pelanggaran Mahasiswa</div>
-                </div>
+                <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261024-4" class="brand-logo-icon" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa">
             </a>
             <div class="d-none d-sm-flex align-items-center">
                 <span class="nav-status-badge">
@@ -676,9 +757,9 @@
                             @endif
 
                             <!-- Form Autentikasi -->
-                            <form action="{{ route('login') }}" method="POST">
+                            <form action="{{ route('login') }}" method="POST" id="loginForm">
                                 @csrf
-                                
+
                                 <!-- Input Identitas (NIM / Email / Username) -->
                                 <div class="form-field-group">
                                     <label class="field-label" for="loginInput">
@@ -688,15 +769,19 @@
                                         <div class="input-icon">
                                             <i class="fas fa-id-card"></i>
                                         </div>
-                                        <input type="text" 
-                                               name="login" 
-                                               id="loginInput" 
-                                               value="{{ old('login') }}" 
-                                               required 
+                                        <input type="text"
+                                               name="login"
+                                               id="loginInput"
+                                               value="{{ old('login') }}"
+                                               required
                                                autofocus
                                                class="input-field-modern"
                                                placeholder="Masukkan NIM atau email">
                                     </div>
+                                    <p style="font-size:0.74rem; color:#94a3b8; margin-top:5px; margin-bottom:0;">
+                                        <i class="fas fa-circle-info" style="color:#0d9488;"></i>
+                                        Mahasiswa: gunakan NIM portal kampus. Staf: gunakan email/username.
+                                    </p>
                                 </div>
 
                                 <!-- Input Kata Sandi -->
@@ -708,26 +793,57 @@
                                         <div class="input-icon">
                                             <i class="fas fa-key"></i>
                                         </div>
-                                        <input type="password" 
-                                               name="password" 
-                                               id="passwordInput" 
+                                        <input type="password"
+                                               name="password"
+                                               id="passwordInput"
                                                required
                                                class="input-field-modern"
-                                               placeholder="Masukkan kata sandi">
+                                               placeholder="Masukkan kata sandi portal">
                                         <button type="button" class="btn-toggle-eye" id="btnTogglePassword" title="Tampilkan / Sembunyikan Kata Sandi">
                                             <i class="fas fa-eye" id="iconEye"></i>
                                         </button>
                                     </div>
                                 </div>
 
+                                <!-- RECAPTCHA WIDGET ("Saya bukan robot") -->
+                                <div style="margin-bottom: 18px;">
+                                    <div class="recaptcha-box" id="recaptchaBox" style="{{ $errors->has('captcha') ? 'border-color: #dc2626;' : '' }}">
+                                        <div class="recaptcha-left" onclick="toggleCaptcha()">
+                                            <div class="recaptcha-checkbox" id="recaptchaCheck">
+                                                <i class="fas fa-check" id="recaptchaCheckIcon" style="display: none; color: #fff; font-size: 14px;"></i>
+                                            </div>
+                                            <label class="recaptcha-label">Saya bukan robot</label>
+                                            <input type="hidden" name="captcha_verified" id="captchaVerified" value="0">
+                                        </div>
+                                        <div class="recaptcha-right">
+                                            <svg class="recaptcha-logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M42 24C42 14.0589 33.9411 6 24 6C17.0601 6 11.0855 9.94052 8.16335 15.6885L13.5684 18.391C15.6178 14.3638 19.4975 11.6 24 11.6C30.8485 11.6 36.4 17.1515 36.4 24C36.4 30.8485 30.8485 36.4 24 36.4C19.4975 36.4 15.6178 33.6362 13.5684 29.609L8.16335 32.3115C11.0855 38.0595 17.0601 42 24 42C33.9411 42 42 33.9411 42 24Z" fill="#1A73E8"/>
+                                                <path d="M6 24C6 26.6853 6.58784 29.2335 7.64385 31.5245L13.0489 28.822C12.3789 27.3512 12 25.7206 12 24C12 22.2794 12.3789 20.6488 13.0489 19.178L7.64385 16.4755C6.58784 18.7665 6 21.3147 6 24Z" fill="#9AA0A6"/>
+                                            </svg>
+                                            <div class="recaptcha-brand-text">reCAPTCHA</div>
+                                            <div class="recaptcha-links">
+                                                <span>Privasi</span> - <span>Persyaratan</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="recaptcha-hint-text">
+                                        * Centang captcha di atas untuk melengkapi validasi
+                                    </div>
+                                    @error('captcha')
+                                        <div class="text-danger small font-weight-bold mt-1">
+                                            <i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}
+                                        </div>
+                                    @enderror
+                                </div>
+
                                 <!-- Checkbox Ingat Saya -->
-                                <div class="remember-checkbox-wrapper">
+                                <div class="remember-checkbox-wrapper" style="margin-top:18px;">
                                     <input type="checkbox" name="remember" id="rememberMe">
                                     <label for="rememberMe">Ingat saya di perangkat ini</label>
                                 </div>
 
                                 <!-- Tombol Masuk Utama -->
-                                <button type="submit" class="btn-login-submit">
+                                <button type="submit" class="btn-login-submit" id="btnLoginSubmit">
                                     <span>Masuk Sekarang</span>
                                     <i class="fas fa-arrow-right"></i>
                                 </button>
@@ -736,7 +852,7 @@
                             <!-- Badge Keamanan Resmi -->
                             <div class="login-secure-footer">
                                 <i class="fas fa-shield-halved"></i>
-                                <span>Akses Terverifikasi &amp; Terlindungi Sistem Kampus</span>
+                                <span>Akses Terverifikasi &amp; Terlindungi · Bridge API Portal Kampus</span>
                             </div>
 
                         </div>
@@ -755,20 +871,45 @@
         </p>
     </footer>
 
-    <!-- Script Show/Hide Password -->
+    <!-- Scripts -->
     <script>
+        // Toggle reCAPTCHA check
+        function toggleCaptcha() {
+            const check = document.getElementById('recaptchaCheck');
+            const icon = document.getElementById('recaptchaCheckIcon');
+            const input = document.getElementById('captchaVerified');
+            const box = document.getElementById('recaptchaBox');
+
+            if (input.value === '1') {
+                input.value = '0';
+                check.classList.remove('checked');
+                icon.style.display = 'none';
+            } else {
+                input.value = '1';
+                check.classList.add('checked');
+                icon.style.display = 'block';
+                box.style.borderColor = '#0f9d58';
+            }
+        }
+
+        // Show/Hide Password toggle
         document.getElementById('btnTogglePassword').addEventListener('click', function () {
-            const pwd = document.getElementById('passwordInput');
+            const pwd  = document.getElementById('passwordInput');
             const icon = document.getElementById('iconEye');
             if (pwd.type === 'password') {
                 pwd.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
             } else {
                 pwd.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
             }
+        });
+
+        // Loading state saat form submit
+        document.getElementById('loginForm').addEventListener('submit', function () {
+            const btn = document.getElementById('btnLoginSubmit');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i> <span>Memeriksa...</span>';
         });
     </script>
 </body>

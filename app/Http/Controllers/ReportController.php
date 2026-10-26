@@ -9,36 +9,140 @@ use App\Models\ViolationReport;
 use App\Models\Student;
 use App\Models\ViolationType;
 use App\Models\ReportEvidence;
+use App\Models\Faculty;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class ReportController extends Controller
 {
     // List of standard faculties and their departments
     public static array $faculties = [
-        'Fakultas Ilmu Komputer' => [
-            'Teknik Informatika',
-            'Sistem Informasi',
+        'FITK' => [
+            'Pendidikan Agama Islam',
+            'Pendidikan Bahasa Arab',
+            'Tadris Bahasa Inggris',
+            'Tadris IPS',
+            'Tadris Matematika',
+            'Tadris Biologi',
+            'Pendidikan Guru Madrasah Ibtidaiyah (PGMI)',
+            'Pendidikan Islam Anak Usia Dini (PIAUD)',
+            'Manajemen Pendidikan Islam',
+            'Tadris Bahasa Indonesia',
+            'Tadris Kimia',
+            'Informatika',
+            'Matematika',
+            'PJJ Pendidikan Agama Islam',
+            'PJJ Pendidikan Bahasa Arab',
+            'PJJ Pendidikan Guru Madrasah Ibtidaiyah',
         ],
-        'Fakultas Teknik' => [
-            'Teknik Elektro',
-            'Teknik Sipil',
+        'FEBI' => [
+            'Perbankan Syariah',
+            'Ekonomi Syariah',
+            'Akuntansi Syariah',
+            'Pariwisata Syariah',
+            'Bioteknologi',
         ],
-        'Fakultas Ekonomi & Bisnis' => [
-            'Manajemen',
-            'Akuntansi',
+        'Fakultas Syariah' => [
+            'Hukum Keluarga Islam',
+            'Hukum Ekonomi Syariah',
+            'Hukum Tata Negara',
+            'Ilmu Falak',
+            'PJJ Hukum Keluarga Islam',
+        ],
+        'FUA' => [
+            'Sejarah Peradaban Islam',
+            'Aqidah dan Filsafat Islam',
+            'Ilmu Al-Qur\'an dan Tafsir',
+            'Ilmu Hadis',
+            'Bahasa dan Sastra Arab',
+            'Tasawuf dan Psikoterapi',
+            'PJJ Sejarah Peradaban Islam',
+        ],
+        'FDKI' => [
+            'Komunikasi dan Penyiaran Islam',
+            'Pengembangan Masyarakat Islam',
+            'Bimbingan dan Konseling Islam',
+            'Sosiologi Agama',
         ],
     ];
 
     // List of standard departments and faculty groupings
     public static array $departments = [
-        'Teknik Informatika' => 'Fakultas Ilmu Komputer',
-        'Sistem Informasi' => 'Fakultas Ilmu Komputer',
-        'Teknik Elektro' => 'Fakultas Teknik',
-        'Teknik Sipil' => 'Fakultas Teknik',
-        'Manajemen' => 'Fakultas Ekonomi & Bisnis',
-        'Akuntansi' => 'Fakultas Ekonomi & Bisnis',
+        // FITK
+        'Pendidikan Agama Islam' => 'FITK',
+        'Pendidikan Bahasa Arab' => 'FITK',
+        'Tadris Bahasa Inggris' => 'FITK',
+        'Tadris IPS' => 'FITK',
+        'Tadris Matematika' => 'FITK',
+        'Tadris Biologi' => 'FITK',
+        'Pendidikan Guru Madrasah Ibtidaiyah (PGMI)' => 'FITK',
+        'Pendidikan Islam Anak Usia Dini (PIAUD)' => 'FITK',
+        'Manajemen Pendidikan Islam' => 'FITK',
+        'Tadris Bahasa Indonesia' => 'FITK',
+        'Tadris Kimia' => 'FITK',
+        'Informatika' => 'FITK',
+        'Matematika' => 'FITK',
+        'PJJ Pendidikan Agama Islam' => 'FITK',
+        'PJJ Pendidikan Bahasa Arab' => 'FITK',
+        'PJJ Pendidikan Guru Madrasah Ibtidaiyah' => 'FITK',
+        // FEBI
+        'Perbankan Syariah' => 'FEBI',
+        'Ekonomi Syariah' => 'FEBI',
+        'Akuntansi Syariah' => 'FEBI',
+        'Pariwisata Syariah' => 'FEBI',
+        'Bioteknologi' => 'FEBI',
+        // Fakultas Syariah
+        'Hukum Keluarga Islam' => 'Fakultas Syariah',
+        'Hukum Ekonomi Syariah' => 'Fakultas Syariah',
+        'Hukum Tata Negara' => 'Fakultas Syariah',
+        'Ilmu Falak' => 'Fakultas Syariah',
+        'PJJ Hukum Keluarga Islam' => 'Fakultas Syariah',
+        // FUA
+        'Sejarah Peradaban Islam' => 'FUA',
+        'Aqidah dan Filsafat Islam' => 'FUA',
+        'Ilmu Al-Qur\'an dan Tafsir' => 'FUA',
+        'Ilmu Hadis' => 'FUA',
+        'Bahasa dan Sastra Arab' => 'FUA',
+        'Tasawuf dan Psikoterapi' => 'FUA',
+        'PJJ Sejarah Peradaban Islam' => 'FUA',
+        // FDKI
+        'Komunikasi dan Penyiaran Islam' => 'FDKI',
+        'Pengembangan Masyarakat Islam' => 'FDKI',
+        'Bimbingan dan Konseling Islam' => 'FDKI',
+        'Sosiologi Agama' => 'FDKI',
     ];
 
     public static array $severities = ['Ringan', 'Sedang', 'Berat'];
+
+    public static function facultyDepartmentMap(): array
+    {
+        static $map;
+        if ($map !== null) {
+            return $map;
+        }
+        if (!Schema::hasTable('faculties') || !Schema::hasTable('departments')) {
+            return $map = self::$faculties;
+        }
+
+        return $map = Faculty::with('departments')->orderBy('name')->get()
+            ->mapWithKeys(fn (Faculty $faculty) => [$faculty->name => $faculty->departments->pluck('name')->all()])
+            ->all();
+    }
+
+    public static function departmentFacultyMap(): array
+    {
+        static $map;
+        if ($map !== null) {
+            return $map;
+        }
+        if (!Schema::hasTable('faculties') || !Schema::hasTable('departments')) {
+            return $map = self::$departments;
+        }
+
+        return $map = Faculty::with('departments')->get()
+            ->flatMap(fn (Faculty $faculty) => $faculty->departments->mapWithKeys(fn ($department) => [$department->name => $faculty->name]))
+            ->all();
+    }
 
     public static array $sanctionOptions = [
         'Teguran Lisan',
@@ -51,6 +155,25 @@ class ReportController extends Controller
         'Klarifikasi / Mediasi Kasus',
     ];
 
+    /**
+     * Daftar pilihan semester terlapor.
+     * Format: "Ganjil YYYY/YYYY" atau "Genap YYYY/YYYY"
+     * Mencakup 4 semester terakhir + 1 semester mendatang untuk kemudahan.
+     */
+    public static function getSemesterOptions(): array
+    {
+        $options = [];
+        $currentYear = (int) date('Y');
+
+        // Generate semester Ganjil & Genap untuk 3 tahun akademik (mundur & maju 1)
+        for ($y = $currentYear + 1; $y >= $currentYear - 2; $y--) {
+            $options[] = "Ganjil {$y}/" . ($y + 1);
+            $options[] = "Genap {$y}/" . ($y + 1);
+        }
+
+        return $options;
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -60,7 +183,16 @@ class ReportController extends Controller
             return redirect()->route('mahasiswa.dashboard');
         }
 
+        if ($user->isKemahasiswaan()) {
+            return redirect()->route('reports.inbox');
+        }
+
         $query = ViolationReport::query()->with(['student', 'reporter', 'verifier', 'handler']);
+
+        // Kajur: mark reports as viewed (clears dashboard notification)
+        if ($user->isKajur()) {
+            session(['kajur_last_viewed_reports_' . $user->id => now()->timestamp]);
+        }
 
         // RBAC filtering
         if ($user->isKajur()) {
@@ -68,17 +200,138 @@ class ReportController extends Controller
             $query->where(function ($q) use ($dept) {
                 $q->where('target_department', $dept)
                   ->orWhere('reported_department', $dept);
-            })->whereIn('status', ['dikonfirmasi', 'diproses', 'selesai']);
-        } elseif ($user->isDekan()) {
+            })->whereNotIn('status', ['pending', 'dilaporkan', 'ditolak']);
+        } elseif ($user->isDekan() || $user->isWadek3()) {
             // Filter departments under this faculty
-            $allowedDepts = array_keys(array_filter(self::$departments, fn($f) => $f === ($user->faculty ?? 'Fakultas Ilmu Komputer')));
-            $query->whereIn('target_department', $allowedDepts)
+            $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn($f) => $f === $user->faculty));
+            $query->where(function ($q) use ($allowedDepts) {
+                $q->whereIn('target_department', $allowedDepts)
                   ->orWhereIn('reported_department', $allowedDepts);
-        } elseif ($user->isWarek() || $user->isKemahasiswaan()) {
-            // Kemahasiswaan & Warek see all
+            });
+        } elseif ($user->isWarek()) {
+            // Warek read only
         }
 
         // Filters
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('department')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('target_department', $request->department)
+                  ->orWhere('reported_department', $request->department);
+            });
+        }
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
+        }
+        // Filter Tahun Akademik (untuk Kajur)
+        if ($user->isKajur() && $request->filled('academic_year') && $request->academic_year !== 'all') {
+            $query->where('academic_year', $request->academic_year);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('report_number', 'like', "%{$search}%")
+                  ->orWhere('reported_name', 'like', "%{$search}%")
+                  ->orWhere('reported_nim', 'like', "%{$search}%")
+                  ->orWhere('incident_location', 'like', "%{$search}%");
+            });
+        }
+
+        $reports = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+        $departments = array_keys(self::departmentFacultyMap());
+
+        return view('reports.index', compact('reports', 'departments'));
+    }
+
+    /**
+     * Inbox Verifikasi: Hanya menampilkan laporan masuk yang belum diverifikasi
+     */
+    public function inbox(Request $request)
+    {
+        $user = Auth::user();
+        if ($user->isMahasiswa()) {
+            return redirect()->route('mahasiswa.dashboard');
+        }
+
+        $query = ViolationReport::query()
+            ->with(['student', 'reporter', 'verifier', 'handler'])
+            ->whereIn('status', ['pending', 'dilaporkan']);
+
+        if ($user->isKajur()) {
+            $dept = $user->department;
+            $query->where(function ($q) use ($dept) {
+                $q->where('target_department', $dept)
+                  ->orWhere('reported_department', $dept);
+            });
+        } elseif ($user->isWadek3() || $user->isDekan()) {
+            $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn($f) => $f === $user->faculty));
+            $query->where(function ($q) use ($allowedDepts) {
+                $q->whereIn('target_department', $allowedDepts)
+                  ->orWhereIn('reported_department', $allowedDepts);
+            });
+        }
+
+        if ($request->filled('department')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('target_department', $request->department)
+                  ->orWhere('reported_department', $request->department);
+            });
+        }
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('report_number', 'like', "%{$search}%")
+                  ->orWhere('reported_name', 'like', "%{$search}%")
+                  ->orWhere('reported_nim', 'like', "%{$search}%")
+                  ->orWhere('incident_location', 'like', "%{$search}%");
+            });
+        }
+
+        $reports = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+        $departments = array_keys(self::departmentFacultyMap());
+        $faculties = self::facultyDepartmentMap();
+
+        return view('reports.inbox', compact('reports', 'departments', 'faculties'));
+    }
+
+    /**
+     * Riwayat Laporan: Hanya menampilkan laporan yang sudah terverifikasi
+     */
+    public function history(Request $request)
+    {
+        $user = Auth::user();
+        if ($user->isMahasiswa()) {
+            return redirect()->route('mahasiswa.dashboard');
+        }
+
+        // Kajur sudah membuka halaman Data Laporan, tandai notifikasi sebagai dibaca.
+        if ($user->isKajur()) {
+            session(['kajur_last_viewed_reports_' . $user->id => now()->timestamp]);
+        }
+
+        $query = ViolationReport::query()
+            ->with(['student', 'reporter', 'verifier', 'handler'])
+            ->whereNotIn('status', ['pending', 'dilaporkan']);
+
+        if ($user->isKajur()) {
+            $dept = $user->department;
+            $query->where(function ($q) use ($dept) {
+                $q->where('target_department', $dept)
+                  ->orWhere('reported_department', $dept);
+            });
+        } elseif ($user->isWadek3() || $user->isDekan()) {
+            $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn($f) => $f === $user->faculty));
+            $query->where(function ($q) use ($allowedDepts) {
+                $q->whereIn('target_department', $allowedDepts)
+                  ->orWhereIn('reported_department', $allowedDepts);
+            });
+        }
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -101,50 +354,68 @@ class ReportController extends Controller
             });
         }
 
-        $reports = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
-        $departments = array_keys(self::$departments);
+        $reports = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+        $departments = array_keys(self::departmentFacultyMap());
+        $faculties = self::facultyDepartmentMap();
 
-        return view('reports.index', compact('reports', 'departments'));
+        return view('reports.history', compact('reports', 'departments', 'faculties'));
     }
 
     public function create()
     {
         $user = Auth::user();
-        if (!$user->isMahasiswa() && !$user->isKemahasiswaan()) {
-            abort(403, 'Hanya Mahasiswa dan Kemahasiswaan yang dapat membuat laporan.');
+        if (!$user->isMahasiswa() && !$user->isKemahasiswaan() && !$user->isKajur()) {
+            abort(403, 'Hanya Mahasiswa, Kemahasiswaan, dan Kajur yang dapat membuat laporan.');
         }
 
-        $faculties = self::$faculties;
-        $departments = array_keys(self::$departments);
-        $severities = self::$severities;
-        return view('reports.create', compact('faculties', 'departments', 'severities'));
+        $faculties       = self::facultyDepartmentMap();
+        $departments     = array_keys(self::departmentFacultyMap());
+        $departmentFacultyMap = self::departmentFacultyMap();
+        $severities      = self::$severities;
+        $semesterOptions = self::getSemesterOptions();
+        return view('reports.create', compact('faculties', 'departments', 'departmentFacultyMap', 'severities', 'semesterOptions'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'reported_name' => 'required|string|max:150',
-            'reported_nim' => 'required|string|max:50',
-            'reported_faculty' => 'nullable|string|max:150',
-            'reported_department' => 'required|string|max:150',
-            'incident_date' => 'required|date',
-            'incident_time' => 'nullable',
-            'incident_location' => 'required|string|max:255',
-            'severity' => 'required|string|in:Ringan,Sedang,Berat',
-            'chronology' => 'required|string',
-            'evidence' => 'nullable|file|mimes:pdf,jpg,jpeg,png,mp4|max:10240', // 10MB
+        $isMahasiswa = Auth::user()->isMahasiswa();
+
+        $departmentFacultyMap = self::departmentFacultyMap();
+        $rules = [
+            'reported_name'        => 'required|string|max:150',
+            'reported_nim'         => 'required|string|max:50',
+            'reported_faculty'     => ['required', 'string', Rule::in(array_keys(self::facultyDepartmentMap()))],
+            'reported_department'  => ['required', 'string', Rule::in(array_keys($departmentFacultyMap))],
+            'reported_semester'    => 'required|regex:/^[0-9]+$/|max:4',
+            'incident_date'        => 'required|date',
+            'incident_time'        => 'required',
+            'incident_location'    => 'required|string|max:255',
+            'severity'             => 'required|string|in:Ringan,Sedang,Berat',
+            'chronology'           => 'required|string',
+            'evidence'             => 'required|file|mimes:pdf,jpg,jpeg,png,mp4|max:10240',
+        ];
+
+        $request->validate($rules, [
+            'reported_name.required'       => 'Nama mahasiswa terlapor wajib diisi.',
+            'reported_nim.required'        => 'NIM mahasiswa terlapor wajib diisi.',
+            'reported_faculty.required'    => 'Fakultas terlapor wajib dipilih.',
+            'reported_department.required' => 'Jurusan / Program Studi terlapor wajib dipilih.',
+            'reported_semester.required'   => 'Semester terlapor wajib diisi.',
+            'reported_semester.regex'      => 'Semester hanya boleh berupa angka (contoh: 2, 4, 6).',
+            'incident_date.required'       => 'Tanggal kejadian wajib diisi.',
+            'incident_time.required'       => 'Waktu / jam kejadian wajib diisi.',
+            'incident_location.required'   => 'Lokasi kejadian wajib diisi.',
+            'severity.required'            => 'Kategori tingkat pelanggaran wajib dipilih.',
+            'chronology.required'          => 'Uraian kronologi kejadian wajib diisi.',
+            'evidence.required'            => 'Berkas bukti pendukung wajib diunggah.',
         ]);
 
-        // Auto point recommendation based on severity
-        $defaultPoints = match ($request->severity) {
-            'Ringan' => 20,
-            'Sedang' => 50,
-            'Berat' => 75,
-            default => 25,
-        };
-
-        // Determine faculty if not explicitly submitted
-        $faculty = $request->reported_faculty ?: (self::$departments[$request->reported_department] ?? null);
+        $faculty = $departmentFacultyMap[$request->reported_department] ?? null;
+        if ($faculty !== $request->reported_faculty) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'reported_department' => 'Jurusan yang dipilih tidak sesuai dengan fakultas.',
+            ]);
+        }
 
         // Link student if found by NIM
         $matchedStudent = Student::where('nim', trim($request->reported_nim))->first();
@@ -152,31 +423,32 @@ class ReportController extends Controller
         $evidencePath = null;
         $evidenceName = null;
         if ($request->hasFile('evidence')) {
-            $file = $request->file('evidence');
+            $file         = $request->file('evidence');
             $evidenceName = $file->getClientOriginalName();
             $evidencePath = $file->store('evidences', 'public');
         }
 
         $report = ViolationReport::create([
-            'report_number' => 'REP-' . date('Ymd') . '-' . rand(1000, 9999),
-            'student_id' => $matchedStudent?->id,
-            'reported_name' => $request->reported_name,
-            'reported_nim' => $request->reported_nim,
-            'reported_faculty' => $faculty,
+            'report_number'     => 'REP-' . date('Ymd') . '-' . rand(1000, 9999),
+            'student_id'        => $matchedStudent?->id,
+            'reported_name'     => $request->reported_name,
+            'reported_nim'      => $request->reported_nim,
+            'reported_faculty'  => $faculty,
             'reported_department' => $request->reported_department,
             'target_department' => $request->reported_department,
-            'reporter_id' => Auth::id(),
-            'points' => $defaultPoints,
-            'severity' => $request->severity,
-            'incident_date' => $request->incident_date,
-            'incident_time' => $request->incident_time,
+            'reporter_id'       => Auth::id(),
+            'points'            => 0, // Sistem poin telah ditiadakan sesuai ketentuan kampus
+            'severity'          => $request->severity,
+            'incident_date'     => $request->incident_date,
+            'incident_time'     => $request->incident_time,
             'incident_location' => $request->incident_location,
-            'chronology' => $request->chronology,
-            'status' => 'pending', // Workflow Step 3: Data Terkirim, masuk ke Inbox Verifikasi Kemahasiswaan
-            'academic_year' => \App\Models\AcademicYear::getActiveYear(),
-            'semester' => 'Ganjil',
-            'evidence_path' => $evidencePath,
-            'evidence_name' => $evidenceName,
+            'chronology'        => $request->chronology,
+            'status'            => 'pending',
+            'academic_year'     => \App\Models\AcademicYear::getActiveYear(),
+            'semester'          => 'Ganjil',
+            'reported_semester' => $request->reported_semester, // Semester berupa angka
+            'evidence_path'     => $evidencePath,
+            'evidence_name'     => $evidenceName,
         ]);
 
         if ($evidencePath) {
@@ -189,7 +461,11 @@ class ReportController extends Controller
         }
 
         if (Auth::user()->isMahasiswa()) {
-            return redirect()->route('mahasiswa.dashboard')->with('success', 'Laporan Anda berhasil dikirim ke Bagian Kemahasiswaan secara aman dan terlindungi (Anonim). Terima kasih atas partisipasi Anda.');
+            return redirect()->route('reports.create')->with('success', 'Laporan Anda berhasil dikirim ke Bagian Kemahasiswaan secara aman dan terlindungi (Anonim). Terima kasih atas partisipasi Anda.');
+        }
+
+        if (Auth::user()->isKajur()) {
+            return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan dari Ketua Jurusan dan sedang menunggu verifikasi Bagian Kemahasiswaan.');
         }
 
         return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan dan sedang menunggu verifikasi Bagian Kemahasiswaan.');
@@ -209,14 +485,14 @@ class ReportController extends Controller
                 abort(403, 'Laporan ini tidak ditujukan untuk jurusan Anda.');
             }
         }
-        if ($user->isDekan()) {
-            $allowedDepts = array_keys(array_filter(self::$departments, fn($f) => $f === ($user->faculty ?? 'Fakultas Ilmu Komputer')));
+        if ($user->isDekan() || $user->isWadek3()) {
+            $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn($f) => $f === $user->faculty));
             if (!in_array($report->target_department, $allowedDepts) && !in_array($report->reported_department, $allowedDepts)) {
                 abort(403, 'Laporan ini berada di luar fakultas Anda.');
             }
         }
 
-        $departments = array_keys(self::$departments);
+        $departments = array_keys(self::departmentFacultyMap());
         $severities = self::$severities;
         $sanctionOptions = self::$sanctionOptions;
 
@@ -236,9 +512,9 @@ class ReportController extends Controller
         $request->validate([
             'reported_name' => 'required|string|max:150',
             'reported_nim' => 'required|string|max:50',
-            'reported_department' => 'required|string|max:150',
+            'reported_department' => ['required', 'string', Rule::in(array_keys(self::departmentFacultyMap()))],
             'severity' => 'required|string|in:Ringan,Sedang,Berat,Suspek',
-            'points' => 'required|integer|min:0',
+            'points' => 'nullable|integer|min:0',
             'incident_location' => 'required|string|max:255',
             'chronology' => 'required|string',
         ]);
@@ -251,7 +527,7 @@ class ReportController extends Controller
             'reported_nim' => $request->reported_nim,
             'reported_department' => $request->reported_department,
             'severity' => $request->severity,
-            'points' => $request->points,
+            'points' => 0, // Sistem poin telah ditiadakan
             'incident_location' => $request->incident_location,
             'chronology' => $request->chronology,
             'student_id' => $matchedStudent?->id ?? $report->student_id,
@@ -271,19 +547,21 @@ class ReportController extends Controller
         $report = ViolationReport::findOrFail($id);
 
         $request->validate([
-            'target_department' => 'required|string|max:150',
+            'target_department' => 'nullable|string|max:150',
             'points' => 'nullable|integer|min:0',
         ]);
 
+        $targetDept = $request->input('target_department') ?: ($report->reported_department ?: $report->target_department);
+
         $report->update([
             'status' => 'dikonfirmasi', // Terkonfirmasi & diteruskan ke Kajur
-            'target_department' => $request->target_department,
-            'points' => $request->filled('points') ? $request->points : $report->points,
+            'target_department' => $targetDept,
+            'points' => 0,
             'verified_by' => $user->id,
             'verified_at' => now(),
         ]);
 
-        return back()->with('success', "Laporan berhasil DIKONFIRMASI dan DITERUSKAN ke Ketua Jurusan {$request->target_department}.");
+        return back()->with('success', "Laporan berhasil DISETUJUI dan DITERUSKAN ke Ketua Jurusan {$targetDept}.");
     }
 
     // Kemahasiswaan Action 3: Tolak Laporan
@@ -347,11 +625,35 @@ class ReportController extends Controller
         return back()->with('success', "Status kasus berhasil diperbarui menjadi: {$statusMsg}. Catatan sanksi telah tersimpan.");
     }
 
-    // Export Excel / CSV
+    // Export Excel / CSV: Khusus data riwayat yang sudah terverifikasi
     public function exportExcel()
     {
-        $reports = ViolationReport::orderBy('created_at', 'desc')->get();
-        $filename = "rekap_pelanggaran_sipma_" . date('Ymd_His') . ".csv";
+        $user = Auth::user();
+        $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan']);
+
+        if ($user && $user->isKajur()) {
+            $dept = $user->department;
+            if ($dept) {
+                $query->where(function ($q) use ($dept) {
+                    $q->where('target_department', $dept)
+                      ->orWhere('reported_department', $dept);
+                });
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        } elseif ($user && ($user->isWadek3() || $user->isDekan())) {
+            $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn($f) => $f === $user->faculty));
+            $query->where(function ($q) use ($allowedDepts) {
+                $q->whereIn('target_department', $allowedDepts)
+                  ->orWhereIn('reported_department', $allowedDepts);
+            });
+        }
+
+        $reports = $query->orderBy('created_at', 'desc')->get();
+        $filenamePrefix = $user && $user->isKajur()
+            ? 'data_laporan_' . \Illuminate\Support\Str::slug($user->department ?: 'jurusan')
+            : 'rekap_laporan_terverifikasi';
+        $filename = $filenamePrefix . '_' . date('Ymd_His') . '.csv';
 
         $headers = [
             "Content-type"        => "text/csv; charset=UTF-8",
@@ -361,7 +663,16 @@ class ReportController extends Controller
             "Expires"             => "0"
         ];
 
-        $columns = ['No. Laporan', 'Tanggal Kejadian', 'Nama Terlapor', 'NIM', 'Jurusan Terlapor', 'Jurusan Dikonfirmasi', 'Tingkat/Kategori', 'Poin', 'Status', 'Sanksi Kajur', 'Pelapor'];
+        $columns = [
+            'No. Laporan',
+            'Tanggal Kejadian',
+            'Nama Terlapor',
+            'NIM',
+            'Jurusan Terlapor',
+            'Semester Terlapor',
+            'Kategori Pelanggaran',
+            'Status'
+        ];
 
         $callback = function() use ($reports, $columns) {
             $file = fopen('php://output', 'w');
@@ -374,13 +685,10 @@ class ReportController extends Controller
                     $r->incident_date ? $r->incident_date->format('Y-m-d') : '-',
                     $r->student_name,
                     $r->student_nim,
-                    $r->reported_department,
-                    $r->target_department,
-                    $r->severity,
-                    $r->points,
-                    $r->status_label,
-                    $r->sanction_type ?? '-',
-                    $r->reporter_display_name,
+                    $r->reported_department ?: $r->target_department,
+                    $r->reported_semester ? 'Semester ' . $r->reported_semester : '-',
+                    $r->severity ?? 'Ringan',
+                    'Terverifikasi',
                 ]);
             }
             fclose($file);
@@ -389,11 +697,27 @@ class ReportController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    // Export PDF / Print View
+    // Export PDF / Print View: Khusus data riwayat yang sudah terverifikasi
     public function exportPdf(Request $request)
     {
         $user = Auth::user();
-        $reports = ViolationReport::orderBy('created_at', 'desc')->get();
+        $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan']);
+
+        if ($user && $user->isKajur()) {
+            $dept = $user->department;
+            $query->where(function ($q) use ($dept) {
+                $q->where('target_department', $dept)
+                  ->orWhere('reported_department', $dept);
+            });
+        } elseif ($user && ($user->isWadek3() || $user->isDekan())) {
+            $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn($f) => $f === $user->faculty));
+            $query->where(function ($q) use ($allowedDepts) {
+                $q->whereIn('target_department', $allowedDepts)
+                  ->orWhereIn('reported_department', $allowedDepts);
+            });
+        }
+
+        $reports = $query->orderBy('created_at', 'desc')->get();
 
         return view('reports.print', compact('reports', 'user'));
     }

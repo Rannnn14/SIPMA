@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $guarded = [];
 
@@ -46,6 +47,11 @@ class User extends Authenticatable
         return $this->role === 'dekan';
     }
 
+    public function isWadek3(): bool
+    {
+        return $this->role === 'wadek3';
+    }
+
     public function isWarek(): bool
     {
         return $this->role === 'warek';
@@ -60,10 +66,11 @@ class User extends Authenticatable
     {
         return match ($this->role) {
             'mahasiswa' => 'Mahasiswa (Pelapor)',
-            'kemahasiswaan', 'admin' => 'Kemahasiswaan (Verifikator)',
+            'kemahasiswaan', 'admin' => 'Admin Kemahasiswaan',
             'kajur', 'kaprodi' => 'Ketua Jurusan (' . ($this->department ?? 'Jurusan') . ')',
             'dekan' => 'Dekan (' . ($this->faculty ?? 'Fakultas') . ')',
-            'warek' => 'Wakil Rektor (Universitas)',
+            'wadek3' => 'Wadek III (' . ($this->faculty ?? 'Fakultas') . ')',
+            'warek' => 'Warek III (Universitas)',
             default => ucfirst($this->role),
         };
     }
