@@ -352,36 +352,34 @@
                     <h6 class="m-0 font-weight-bold text-dark"><i class="fas fa-user-check mr-1" style="color: #0d9488;"></i> Panel Verifikasi</h6>
                 </div>
                 <div class="card-body p-4">
-                    @if(in_array($report->status, ['pending', 'dilaporkan']))
+                    @if($report->status === 'ditolak')
+                        <div class="alert alert-danger small mb-3" style="border-radius: 8px;">
+                            Laporan ini ditolak. Anda masih dapat menyetujuinya kembali; jika tetap ditolak, data akan dihapus otomatis setelah tujuh hari sejak keputusan penolakan.
+                        </div>
+                    @elseif(in_array($report->status, ['pending', 'dilaporkan']))
                         <p class="small text-muted mb-3" style="line-height: 1.5;">
                             Tinjau laporan ini. Ketika Anda menekan <strong>Setujui</strong>, laporan otomatis terverifikasi dan diteruskan ke Ketua Jurusan <strong>{{ $report->reported_department }}</strong>.
                         </p>
-
-                        <!-- Tombol Setujui & Tolak Berderet Rapi -->
-                        <div class="d-flex align-items-center" style="gap: 10px;">
-                            <!-- Form Setujui (Otomatis Terkirim ke Kajur Sesuai Jurusan Terlapor) -->
-                            <form action="{{ route('reports.approve', $report->id) }}" method="POST" class="flex-fill m-0">
-                                @csrf
-                                <input type="hidden" name="target_department" value="{{ $report->reported_department }}">
-                                <button type="submit" class="btn btn-block font-weight-bold text-white shadow-sm py-2" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); border-radius: 10px; font-size: 0.92rem;" onclick="return confirm('Apakah Anda yakin ingin MENYETUJUI laporan ini dan meneruskannya ke Ketua Jurusan {{ $report->reported_department }}?')">
-                                    <i class="fas fa-check-circle mr-1"></i> Setujui
-                                </button>
-                            </form>
-
-                            <!-- Tombol Tolak Laporan (Membuka Modal Alasan Penolakan) -->
-                            <button type="button" class="btn btn-outline-danger flex-fill font-weight-bold shadow-sm py-2" style="border-radius: 10px; font-size: 0.92rem;" data-toggle="modal" data-target="#modalTolak">
-                                <i class="fas fa-times-circle mr-1"></i> Tolak
-                            </button>
-                        </div>
                     @else
-                        <div class="p-3 rounded text-center" style="background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 10px;">
-                            <i class="fas fa-check-circle fa-2x mb-2" style="color: #0d9488;"></i>
-                            <div class="font-weight-bold text-dark" style="font-size: 0.92rem;">Laporan Terverifikasi</div>
-                            <small class="text-muted d-block mt-1">
-                                Laporan telah diteruskan ke Ketua Jurusan <strong>{{ $report->target_department ?? $report->reported_department }}</strong>.
-                            </small>
-                        </div>
+                        <p class="small text-muted mb-3" style="line-height: 1.5;">
+                            Status saat ini: <strong>{{ $report->status_label }}</strong>. Laporan sudah diteruskan ke Ketua Jurusan. Anda masih dapat menolaknya jika diperlukan.
+                        </p>
                     @endif
+
+                    <div class="d-flex align-items-center" style="gap: 10px;">
+                        @if(in_array($report->status, ['pending', 'dilaporkan', 'ditolak']))
+                        <form action="{{ route('reports.approve', $report->id) }}" method="POST" class="flex-fill m-0">
+                            @csrf
+                            <input type="hidden" name="target_department" value="{{ $report->target_department ?? $report->reported_department }}">
+                            <button type="submit" class="btn btn-block font-weight-bold text-white shadow-sm py-2" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); border-radius: 10px; font-size: 0.92rem;" onclick="return confirm('Setujui laporan ini dan teruskan ke Ketua Jurusan {{ $report->target_department ?? $report->reported_department }}?')">
+                                <i class="fas fa-check-circle mr-1"></i> {{ $report->status === 'ditolak' ? 'Setujui Kembali' : 'Setujui & Teruskan' }}
+                            </button>
+                        </form>
+                        @endif
+                        <button type="button" class="btn btn-outline-danger {{ in_array($report->status, ['pending', 'dilaporkan', 'ditolak']) ? 'flex-fill' : 'btn-block' }} font-weight-bold shadow-sm py-2" style="border-radius: 10px; font-size: 0.92rem;" data-toggle="modal" data-target="#modalTolak">
+                            <i class="fas fa-times-circle mr-1"></i> {{ $report->status === 'ditolak' ? 'Ubah Alasan Tolak' : 'Tolak' }}
+                        </button>
+                    </div>
                 </div>
             </div>
             @endif

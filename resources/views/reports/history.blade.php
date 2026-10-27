@@ -1,5 +1,5 @@
 <x-layout>
-    <x-slot:title>{{ auth()->user()->isKajur() ? 'Data Laporan' : 'Riwayat Laporan Terverifikasi' }} | SIPMA</x-slot:title>
+    <x-slot:title>{{ auth()->user()->isKajur() ? 'Data Laporan' : 'Riwayat Hasil Verifikasi' }} | SIPMA</x-slot:title>
 
     <style>
         .filter-card {
@@ -84,7 +84,7 @@
                 </div>
                 <div>
                     <h5 class="m-0 font-weight-bold text-white" style="font-size: 1.25rem; letter-spacing: -0.2px;">
-                        {{ auth()->user()->isKajur() ? 'Data Laporan' : 'Riwayat Laporan Terverifikasi' }}
+                        {{ auth()->user()->isKajur() ? 'Data Laporan' : 'Riwayat Hasil Verifikasi' }}
                     </h5>
                     <small class="text-white-50">Daftar seluruh laporan pelanggaran mahasiswa yang telah melalui proses verifikasi dan tindak lanjut.</small>
                 </div>
@@ -151,7 +151,7 @@
                     <i class="fas fa-history"></i>
                 </div>
                 <h6 class="m-0 font-weight-bold text-dark" style="font-size: 0.95rem;">
-                    {{ auth()->user()->isKajur() ? 'Data Laporan Jurusan' : 'Riwayat Seluruh Laporan Terverifikasi' }}
+                    {{ auth()->user()->isKajur() ? 'Data Laporan Jurusan' : 'Riwayat Hasil Verifikasi Laporan' }}
                 </h6>
             </div>
             <div class="d-flex align-items-center" style="gap: 10px;">
@@ -159,7 +159,7 @@
                     <i class="fas fa-file-excel mr-1.5"></i> Export Excel
                 </a>
                 <span class="badge badge-success px-3 py-1.5 font-weight-bold" style="background:#ecfdf5; color:#059669; border: 1px solid #d1fae5; border-radius: 20px; font-size: 0.8rem;">
-                    <i class="fas fa-check-double mr-1"></i> {{ $reports->total() }} Terverifikasi
+                    <i class="fas fa-check-double mr-1"></i> {{ $reports->total() }} Hasil Verifikasi
                 </span>
             </div>
         </div>
@@ -223,11 +223,17 @@
                             </span>
                         </td>
 
-                        <!-- Status (Hanya Terverifikasi) -->
+                        <!-- Status Hasil Verifikasi -->
                         <td class="text-center">
-                            <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; border-radius: 8px; font-size: 0.78rem;">
-                                <i class="fas fa-check-circle mr-1"></i> Terverifikasi
-                            </span>
+                            @if($report->status === 'ditolak')
+                                <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.78rem;">
+                                    <i class="fas fa-times-circle mr-1"></i> Ditolak
+                                </span>
+                            @else
+                                <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; border-radius: 8px; font-size: 0.78rem;">
+                                    <i class="fas fa-check-circle mr-1"></i> Terverifikasi
+                                </span>
+                            @endif
                         </td>
 
                         <!-- Aksi -->
@@ -244,8 +250,8 @@
                         <td colspan="7" class="text-center text-muted py-5">
                             <div class="py-3">
                                 <i class="fas fa-history fa-3x text-muted mb-2" style="opacity: 0.4;"></i>
-                                <div class="font-weight-bold text-dark">Belum ada riwayat laporan terverifikasi</div>
-                                <small class="text-muted">Laporan yang diverifikasi akan tersimpan rapi pada halaman ini.</small>
+                                <div class="font-weight-bold text-dark">Belum ada riwayat hasil verifikasi</div>
+                                <small class="text-muted">Laporan yang disetujui atau ditolak akan tersimpan pada halaman ini.</small>
                             </div>
                         </td>
                     </tr>

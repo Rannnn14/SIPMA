@@ -323,7 +323,7 @@ class ReportController extends Controller
             $query->where(function ($q) use ($dept) {
                 $q->where('target_department', $dept)
                   ->orWhere('reported_department', $dept);
-            });
+            })->where('status', '!=', 'ditolak');
         } elseif ($user->isWadek3() || $user->isDekan()) {
             $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn($f) => $f === $user->faculty));
             $query->where(function ($q) use ($allowedDepts) {
@@ -483,6 +483,7 @@ class ReportController extends Controller
             return redirect()->route('mahasiswa.dashboard')->with('error', 'Mahasiswa hanya memiliki hak akses untuk melakukan pelaporan pelanggaran.');
         }
         if ($user->isKajur()) {
+            abort_if($report->status === 'ditolak', 404);
             if ($report->target_department !== $user->department && $report->reported_department !== $user->department) {
                 abort(403, 'Laporan ini tidak ditujukan untuk jurusan Anda.');
             }
@@ -521,6 +522,9 @@ class ReportController extends Controller
         if ($user->isMahasiswa()) {
             return redirect()->route('mahasiswa.dashboard')->with('error', 'Mahasiswa hanya memiliki hak akses untuk melakukan pelaporan pelanggaran.');
         }
+        if ($user->isKajur()) {
+            abort_if($report->status === 'ditolak', 404);
+        }
         if ($user->isKajur() && $report->target_department !== $user->department && $report->reported_department !== $user->department) {
             abort(403, 'Laporan ini tidak ditujukan untuk jurusan Anda.');
         }
@@ -543,6 +547,10 @@ class ReportController extends Controller
         }
 
         $report = ViolationReport::findOrFail($id);
+
+        if (!in_array($report->status, ['pending', 'dilaporkan', 'ditolak'], true)) {
+            return back()->with('error', 'Laporan ini sudah terverifikasi dan diteruskan ke Ketua Jurusan.');
+        }
 
         $request->validate([
             'reported_name' => 'required|string|max:150',
@@ -592,8 +600,14 @@ class ReportController extends Controller
             'status' => 'dikonfirmasi', // Terkonfirmasi & diteruskan ke Kajur
             'target_department' => $targetDept,
             'points' => 0,
+            'rejection_reason' => null,
             'verified_by' => $user->id,
             'verified_at' => now(),
+            'handled_by' => null,
+            'handled_at' => null,
+            'completed_at' => null,
+            'sanction_type' => null,
+            'kajur_notes' => null,
         ]);
 
         return back()->with('success', "Laporan berhasil DISETUJUI dan DITERUSKAN ke Ketua Jurusan {$targetDept}.");
@@ -618,6 +632,11 @@ class ReportController extends Controller
             'rejection_reason' => $request->rejection_reason,
             'verified_by' => $user->id,
             'verified_at' => now(),
+            'handled_by' => null,
+            'handled_at' => null,
+            'completed_at' => null,
+            'sanction_type' => null,
+            'kajur_notes' => null,
         ]);
 
         return back()->with('success', 'Laporan telah DITOLAK. Pelapor dapat membaca alasan penolakan pada status laporan.');
@@ -632,6 +651,8 @@ class ReportController extends Controller
         }
 
         $report = ViolationReport::findOrFail($id);
+
+        abort_if($report->status === 'ditolak', 404);
 
         // Department authorization
         if ($report->target_department !== $user->department && $report->reported_department !== $user->department) {
@@ -664,10 +685,11 @@ class ReportController extends Controller
     public function exportExcel()
     {
         $user = Auth::user();
-        $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan']);
+        $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan', 'ditolak']);
 
         if ($user && $user->isKajur()) {
             $dept = $user->department;
+            $query->where('status', '!=', 'ditolak');
             if ($dept) {
                 $query->where(function ($q) use ($dept) {
                     $q->where('target_department', $dept)
@@ -723,7 +745,7 @@ class ReportController extends Controller
                     $r->reported_department ?: $r->target_department,
                     $r->reported_semester ? 'Semester ' . $r->reported_semester : '-',
                     $r->severity ?? 'Ringan',
-                    'Terverifikasi',
+                    $r->status_label,
                 ]);
             }
             fclose($file);
@@ -736,10 +758,11 @@ class ReportController extends Controller
     public function exportPdf(Request $request)
     {
         $user = Auth::user();
-        $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan']);
+        $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan', 'ditolak']);
 
         if ($user && $user->isKajur()) {
             $dept = $user->department;
+            $query->where('status', '!=', 'ditolak');
             $query->where(function ($q) use ($dept) {
                 $q->where('target_department', $dept)
                   ->orWhere('reported_department', $dept);
