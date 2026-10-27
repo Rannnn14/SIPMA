@@ -457,22 +457,28 @@
                     <label class="font-weight-bold text-dark small mb-2">Unggah Berkas Bukti Pendukung <span class="text-danger">*</span></label>
                     
                     <div class="dropzone-box" onclick="document.getElementById('evidenceFile').click()">
-                        <input type="file" name="evidence" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4" required style="display: none;">
+                        <input type="file" name="evidence[]" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4" multiple required style="display: none;">
                         <div class="mb-2">
                             <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto text-primary" style="width: 52px; height: 52px; background: #eff6ff;">
                                 <i class="fas fa-cloud-upload-alt fa-2x"></i>
                             </div>
                         </div>
                         <h6 class="font-weight-bold text-dark mb-1" id="fileNameDisplay">
-                            Klik di sini untuk memilih atau menarik berkas bukti
+                            Klik di sini untuk memilih 1–4 berkas bukti
                         </h6>
                         <p class="text-muted small mb-2" id="fileSubDisplay">
-                            Format yang didukung: <strong>PDF, JPG, PNG, atau MP4</strong> (Maksimal ukuran file: <strong>10 MB</strong>)
+                            Format: <strong>PDF, JPG, PNG, MP4</strong> · Maksimal <strong>4 file</strong>, masing-masing 10 MB
                         </p>
+                        <div id="selectedEvidenceFiles" class="d-flex flex-column align-items-center mt-3"></div>
                         <div class="d-flex justify-content-center flex-wrap">
                             <span class="badge badge-light border text-muted mr-1 mb-1">📄 PDF Dokumen</span>
                             <span class="badge badge-light border text-muted mr-1 mb-1">🖼️ JPG / PNG Foto</span>
                             <span class="badge badge-light border text-muted mb-1">🎥 MP4 Rekaman Video</span>
+                        </div>
+                        <div class="mt-3" onclick="event.stopPropagation();">
+                            <button type="button" id="addEvidenceFile" class="btn btn-sm btn-outline-primary px-3" style="display: none; border-radius: 8px;" onclick="document.getElementById('evidenceFile').click();">
+                                <i class="fas fa-plus mr-1"></i> Tambah Lampiran
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -604,13 +610,52 @@
             const fileInput = document.getElementById('evidenceFile');
             const fileNameDisplay = document.getElementById('fileNameDisplay');
             const fileSubDisplay = document.getElementById('fileSubDisplay');
+            const selectedFilesDisplay = document.getElementById('selectedEvidenceFiles');
+            const addFileButton = document.getElementById('addEvidenceFile');
             if (fileInput) {
-                fileInput.addEventListener('change', function (e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        fileNameDisplay.innerHTML = '<span class="text-success"><i class="fas fa-check-circle mr-1"></i> ' + file.name + '</span>';
-                        fileSubDisplay.innerHTML = 'Ukuran berkas: <strong>' + (file.size / (1024 * 1024)).toFixed(2) + ' MB</strong> | Tipe: ' + file.type;
+                let selectedFiles = [];
+                fileInput.addEventListener('click', (event) => event.stopPropagation());
+                const renderSelectedFiles = () => {
+                    const transfer = new DataTransfer();
+                    selectedFiles.forEach((file) => transfer.items.add(file));
+                    fileInput.files = transfer.files;
+                    const files = selectedFiles;
+                    selectedFilesDisplay.replaceChildren();
+                    fileNameDisplay.textContent = files.length ? files.length + ' berkas dipilih' : 'Klik di sini untuk memilih 1–4 berkas bukti';
+                    addFileButton.style.display = files.length > 0 && files.length < 4 ? 'inline-block' : 'none';
+                    fileSubDisplay.innerHTML = files.length
+                        ? 'Total ukuran: <strong>' + (files.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024)).toFixed(2) + ' MB</strong>'
+                        : 'Format: <strong>PDF, JPG, PNG, MP4</strong> · Maksimal <strong>4 file</strong>, masing-masing 10 MB';
+                    files.forEach((file, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'd-flex align-items-center justify-content-between bg-white border rounded px-2 py-1 mb-1';
+                        row.style.cssText = 'width: min(100%, 420px); gap: 12px;';
+                        const name = document.createElement('span');
+                        name.className = 'small text-dark text-truncate';
+                        name.textContent = file.name;
+                        const remove = document.createElement('button');
+                        remove.type = 'button';
+                        remove.className = 'btn btn-sm btn-outline-danger py-0 px-2';
+                        remove.setAttribute('aria-label', 'Hapus ' + file.name);
+                        remove.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
+                        remove.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            selectedFiles.splice(index, 1);
+                            renderSelectedFiles();
+                        });
+                        row.append(name, remove);
+                        selectedFilesDisplay.appendChild(row);
+                    });
+                };
+                fileInput.addEventListener('change', () => {
+                    const newlySelected = Array.from(fileInput.files);
+                    if (selectedFiles.length + newlySelected.length > 4) {
+                        alert('Maksimal 4 berkas bukti yang dapat dipilih.');
+                        renderSelectedFiles();
+                        return;
                     }
+                    selectedFiles = selectedFiles.concat(newlySelected);
+                    renderSelectedFiles();
                 });
             }
         });

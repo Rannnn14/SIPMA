@@ -216,22 +216,31 @@
                     </h6>
                 </div>
                 <div class="card-body p-4">
-                    @if($report->evidence_path)
-                        <div class="d-flex align-items-center justify-content-between p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    @if($report->evidences->isNotEmpty())
+                        @foreach($report->evidences as $evidence)
+                        <div class="d-flex align-items-center justify-content-between p-3 rounded mb-2" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; gap: 12px;">
                             <div class="d-flex align-items-center">
                                 <div class="rounded-circle d-flex align-items-center justify-content-center mr-3" style="width: 44px; height: 44px; background: #e6fffa; color: #0d9488; font-size: 1.15rem;">
                                     <i class="fas fa-file-alt"></i>
                                 </div>
                                 <div>
-                                    <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">{{ $report->evidence_name ?? 'Berkas_Bukti_Pelanggaran' }}</div>
+                                    <div class="font-weight-bold text-dark text-break" style="font-size: 0.95rem;">{{ $evidence->original_name }}</div>
                                     <small class="text-muted">Bukti yang diunggah pelapor saat submisi data</small>
                                 </div>
                             </div>
                             <div>
-                                <a href="{{ asset('storage/' . $report->evidence_path) }}" target="_blank" class="btn btn-sm font-weight-bold text-white px-3 py-2 shadow-sm" style="background: #0d9488; border-radius: 8px;">
+                                <a href="{{ route('reports.evidence.preview', ['id' => $report->id, 'evidenceId' => $evidence->id]) }}" target="_blank" rel="noopener" class="btn btn-sm font-weight-bold text-white px-3 py-2 shadow-sm" style="background: #0d9488; border-radius: 8px; white-space: nowrap;">
                                     <i class="fas fa-external-link-alt mr-1"></i> Buka / Pratinjau
                                 </a>
                             </div>
+                        </div>
+                        @endforeach
+                    @elseif($report->evidence_path)
+                        <div class="d-flex align-items-center justify-content-between p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; gap: 12px;">
+                            <div class="font-weight-bold text-dark text-break">{{ $report->evidence_name ?? 'Berkas_Bukti_Pelanggaran' }}</div>
+                            <a href="{{ route('reports.evidence.preview', $report->id) }}" target="_blank" rel="noopener" class="btn btn-sm font-weight-bold text-white px-3 py-2 shadow-sm" style="background: #0d9488; border-radius: 8px; white-space: nowrap;">
+                                <i class="fas fa-external-link-alt mr-1"></i> Buka / Pratinjau
+                            </a>
                         </div>
                     @else
                         <div class="text-muted small font-italic py-2">

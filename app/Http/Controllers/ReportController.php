@@ -392,7 +392,8 @@ class ReportController extends Controller
             'incident_location'    => 'required|string|max:255',
             'severity'             => 'required|string|in:Ringan,Sedang,Berat',
             'chronology'           => 'required|string',
-            'evidence'             => 'required|file|mimes:pdf,jpg,jpeg,png,mp4|max:10240',
+            'evidence'             => 'required|array|min:1|max:4',
+            'evidence.*'           => 'required|file|mimes:pdf,jpg,jpeg,png,mp4|max:10240',
         ];
 
         $request->validate($rules, [
@@ -408,6 +409,9 @@ class ReportController extends Controller
             'severity.required'            => 'Kategori tingkat pelanggaran wajib dipilih.',
             'chronology.required'          => 'Uraian kronologi kejadian wajib diisi.',
             'evidence.required'            => 'Berkas bukti pendukung wajib diunggah.',
+            'evidence.max'                 => 'Maksimal 4 berkas bukti yang dapat diunggah.',
+            'evidence.*.mimes'             => 'Setiap berkas bukti harus berformat PDF, JPG, PNG, atau MP4.',
+            'evidence.*.max'               => 'Ukuran setiap berkas bukti maksimal 10 MB.',
         ]);
 
         $faculty = $departmentFacultyMap[$request->reported_department] ?? null;
@@ -420,13 +424,10 @@ class ReportController extends Controller
         // Link student if found by NIM
         $matchedStudent = Student::where('nim', trim($request->reported_nim))->first();
 
-        $evidencePath = null;
-        $evidenceName = null;
-        if ($request->hasFile('evidence')) {
-            $file         = $request->file('evidence');
-            $evidenceName = $file->getClientOriginalName();
-            $evidencePath = $file->store('evidences', 'public');
-        }
+        $evidenceFiles = $request->file('evidence', []);
+        $firstEvidence = $evidenceFiles[0] ?? null;
+        $evidenceName = $firstEvidence?->getClientOriginalName();
+        $evidencePath = $firstEvidence?->store('evidences', 'public');
 
         $report = ViolationReport::create([
             'report_number'     => 'REP-' . date('Ymd') . '-' . rand(1000, 9999),
@@ -451,12 +452,13 @@ class ReportController extends Controller
             'evidence_name'     => $evidenceName,
         ]);
 
-        if ($evidencePath) {
+        foreach ($evidenceFiles as $index => $file) {
+            $filePath = $index === 0 ? $evidencePath : $file->store('evidences', 'public');
             ReportEvidence::create([
                 'violation_report_id' => $report->id,
-                'original_name' => $evidenceName,
-                'file_path' => $evidencePath,
-                'mime_type' => $request->file('evidence')->getClientMimeType(),
+                'original_name' => $file->getClientOriginalName(),
+                'file_path' => $filePath,
+                'mime_type' => $file->getClientMimeType(),
             ]);
         }
 
@@ -497,6 +499,39 @@ class ReportController extends Controller
         $sanctionOptions = self::$sanctionOptions;
 
         return view('reports.show', compact('report', 'departments', 'severities', 'sanctionOptions'));
+    }
+
+    public function previewEvidence($id, $evidenceId = null)
+    {
+        $report = ViolationReport::with('evidences')->findOrFail($id);
+        $user = Auth::user();
+
+        $evidence = $evidenceId
+            ? $report->evidences->firstWhere('id', (int) $evidenceId)
+            : $report->evidences->first();
+        if ($evidenceId && !$evidence) {
+            abort(404, 'Berkas bukti tidak ditemukan.');
+        }
+        $filePath = $evidence?->file_path ?? $report->evidence_path;
+        $fileName = $evidence?->original_name ?? $report->evidence_name ?? 'Berkas Bukti';
+        $fileMimeType = $evidence?->mime_type ?? \Illuminate\Support\Facades\Storage::disk('public')->mimeType($filePath);
+        if (!$filePath) {
+            abort(404, 'Berkas bukti tidak ditemukan.');
+        }
+        if ($user->isMahasiswa()) {
+            return redirect()->route('mahasiswa.dashboard')->with('error', 'Mahasiswa hanya memiliki hak akses untuk melakukan pelaporan pelanggaran.');
+        }
+        if ($user->isKajur() && $report->target_department !== $user->department && $report->reported_department !== $user->department) {
+            abort(403, 'Laporan ini tidak ditujukan untuk jurusan Anda.');
+        }
+        if ($user->isDekan() || $user->isWadek3()) {
+            $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn ($faculty) => $faculty === $user->faculty));
+            if (!in_array($report->target_department, $allowedDepts) && !in_array($report->reported_department, $allowedDepts)) {
+                abort(403, 'Laporan ini berada di luar fakultas Anda.');
+            }
+        }
+
+        return view('reports.evidence-preview', compact('filePath', 'fileName', 'fileMimeType'));
     }
 
     // Kemahasiswaan Action 1: Koreksi Data Pelanggar

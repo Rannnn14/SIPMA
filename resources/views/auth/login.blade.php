@@ -53,7 +53,7 @@
         /* Top Navbar - Responsive */
         .top-navbar {
             background: #ffffff;
-            padding: 12px 20px;
+            padding: 8px 20px;
             border-bottom: 1px solid #e2e8f0;
             box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
             position: relative;
@@ -61,7 +61,7 @@
         }
         @media (min-width: 768px) {
             .top-navbar {
-                padding: 14px 28px;
+                padding: 8px 28px;
             }
         }
         .brand-logo-container {
@@ -71,7 +71,7 @@
         }
         .brand-logo-icon {
             display: block;
-            width: clamp(140px, 24vw, 200px);
+            width: clamp(130px, 18vw, 170px);
             height: auto;
             aspect-ratio: 1737 / 688;
             object-fit: contain;
@@ -131,17 +131,17 @@
         .main-wrapper {
             flex: 1;
             display: flex;
-            align-items: center;
-            padding: 24px 16px;
+            align-items: flex-start;
+            padding: 20px 16px;
         }
         @media (min-width: 768px) {
             .main-wrapper {
-                padding: 40px 24px;
+                padding: 24px 24px;
             }
         }
         @media (min-width: 1200px) {
             .main-wrapper {
-                padding: 48px 30px;
+                padding: 30px 30px;
             }
         }
         .main-section {

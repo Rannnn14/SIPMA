@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/laporan', [ReportController::class, 'store'])->name('reports.store');
     Route::get('/laporan/export/excel', [ReportController::class, 'exportExcel'])->name('reports.export.excel');
     Route::get('/laporan/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export.pdf');
+    Route::get('/laporan/{id}/bukti/{evidenceId?}', [ReportController::class, 'previewEvidence'])->name('reports.evidence.preview');
     Route::get('/laporan/{id}', [ReportController::class, 'show'])->name('reports.show');
 
     // Kemahasiswaan Actions (Verifikator & Super Admin)

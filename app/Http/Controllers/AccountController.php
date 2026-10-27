@@ -66,6 +66,33 @@ class AccountController extends Controller
         $user = DB::transaction(function () use ($data) {
             [$faculty, $department] = $this->resolveOrganization($data);
 
+            // Restore a soft-deleted managed account when its unique identifiers are reused.
+            $deletedAccount = User::onlyTrashed()
+                ->whereIn('role', self::MANAGED_ROLES)
+                ->where(function ($query) use ($data) {
+                    $query->where('email', $data['email'])
+                        ->orWhere('username', $data['username']);
+                })
+                ->first();
+
+            if ($deletedAccount) {
+                $deletedAccount->fill([
+                    'name' => $data['name'] ?? '',
+                    'email' => $data['email'],
+                    'username' => $data['username'],
+                    'password' => $data['password'],
+                    'role' => $data['role'],
+                    'faculty' => $faculty?->name,
+                    'department' => $department?->name,
+                    'nim' => null,
+                    'student_id' => null,
+                ]);
+                $deletedAccount->restore();
+                $deletedAccount->save();
+
+                return $deletedAccount;
+            }
+
             return User::create([
                 'name' => $data['name'] ?? '',
                 'email' => $data['email'],
@@ -134,8 +161,8 @@ class AccountController extends Controller
 
         $data = $request->validate([
             'name' => ['nullable', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user?->id)],
-            'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($user?->id)],
+            'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user?->id)->whereNull('deleted_at')],
+            'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($user?->id)->whereNull('deleted_at')],
             'role' => ['required', Rule::in($roles)],
             'faculty' => ['nullable', 'string', Rule::in(array_merge($faculties, ['__new__']))],
             'department' => ['nullable', 'string', Rule::in(array_merge($departments, ['__new__']))],
