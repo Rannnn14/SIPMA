@@ -148,7 +148,7 @@
                             <span class="font-weight-bold small text-white">Laporan ke Kajur</span>
                         </div>
                         <p class="mb-0 text-white-50" style="font-size: 0.78rem; line-height: 1.45;">
-                            Laporan terverifikasi otomatis masuk ke akun Ketua Jurusan terkait untuk ditindaklanjuti.
+                            Laporan yang telah diverifikasi Kemahasiswaan tersedia di sini sebagai informasi untuk jurusan.
                         </p>
                     </div>
                 </div>
@@ -168,7 +168,7 @@
                 <small class="text-muted">Laporan terverifikasi dari Kemahasiswaan yang belum Anda buka.</small>
             </div>
         </div>
-        <a href="{{ route('reports.history') }}" class="btn btn-sm font-weight-bold px-3 py-2 text-dark shadow-sm" style="background: #fde68a; border-radius: 8px;">
+        <a href="{{ route('reports.history', ['academic_year' => $selectedAcademicYear]) }}" class="btn btn-sm font-weight-bold px-3 py-2 text-dark shadow-sm" style="background: #fde68a; border-radius: 8px;">
             Buka Data Laporan <i class="fas fa-arrow-right ml-1"></i>
         </a>
     </div>
@@ -234,7 +234,7 @@
                         </div>
                         <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
                             <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: #475569; letter-spacing: 0.5px;">Penanggung Jawab</div>
-                            <div class="font-weight-bold text-dark">{{ auth()->user()->clean_name }}</div>
+                            <div class="font-weight-bold text-dark">{{ auth()->user()->display_name }}</div>
                         </div>
                         <div class="p-3 rounded" style="background: #fffbeb; border: 1px solid #fef3c7;">
                             <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: #b45309; letter-spacing: 0.5px;">Periode Dipilih</div>
@@ -254,7 +254,7 @@
                                 <i class="fas fa-file-signature mr-1"></i> Buat Laporan Baru
                             </a>
                             <a href="{{ route('reports.export.excel') }}"
-                               class="btn font-weight-bold text-white px-4 py-2 text-center"
+                               class="btn font-weight-bold text-white px-4 py-2 text-center mobile-hide-export"
                                style="background: linear-gradient(135deg, #166534 0%, #16a34a 100%); border-radius: 10px; font-size: 0.88rem; box-shadow: 0 4px 10px rgba(22,101,52,0.25);">
                                 <i class="fas fa-file-excel mr-1"></i> Export Excel Laporan
                             </a>
@@ -326,23 +326,9 @@
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    @if(in_array($case->status, ['pending', 'dilaporkan']))
-                                        <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; border-radius: 8px; font-size: 0.78rem;">
-                                            <i class="fas fa-hourglass-half mr-1"></i> Menunggu Verifikasi
-                                        </span>
-                                    @elseif($case->status === 'selesai')
-                                        <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 8px; font-size: 0.78rem;">
-                                            <i class="fas fa-check-double mr-1"></i> Selesai
-                                        </span>
-                                    @elseif($case->status === 'diproses')
-                                        <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 0.78rem;">
-                                            <i class="fas fa-spinner fa-spin mr-1"></i> Diproses
-                                        </span>
-                                    @else
-                                        <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; border-radius: 8px; font-size: 0.78rem;">
-                                            <i class="fas fa-check-circle mr-1"></i> Terverifikasi
-                                        </span>
-                                    @endif
+                                    <span class="report-status-badge report-status-verified">
+                                        <span class="report-status-icon"><i class="fas fa-check"></i></span> Terverifikasi
+                                    </span>
                                 </td>
                                 <td class="text-center">
                                     <a href="{{ route('reports.show', ['id' => $case->id, 'return_to' => request()->getRequestUri()]) }}" class="btn btn-sm btn-outline-secondary font-weight-bold px-3 py-1.5" style="border-radius: 8px; font-size: 0.82rem;" title="Lihat Detail">
@@ -391,7 +377,7 @@
                     maintainAspectRatio: false,
                     animation: { duration: 900, easing: 'easeOutQuart' },
                     scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        y: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } }
                     },
                     plugins: {
                         legend: { display: false }
@@ -410,9 +396,20 @@
                             'bar',
                             labels,
                             [{ label: 'Jumlah Laporan', data: dataCounts, backgroundColor: colors, borderRadius: 8 }],
-                            { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+                            { scales: { y: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } } }, plugins: { legend: { display: false } } }
                         );
                     }
+                });
+            }
+            const key = 'sipma-last-list:' + location.pathname;
+            if (new URLSearchParams(location.search).has('restore_position')) {
+                const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
+                if (saved?.url) history.replaceState(null, '', saved.url);
+                if (saved?.scrollY) requestAnimationFrame(() => window.scrollTo(0, saved.scrollY));
+                sessionStorage.removeItem(key);
+            } else {
+                document.querySelectorAll('a[href*="/laporan/"]').forEach(link => {
+                    if (link.href.includes('return_to=')) link.addEventListener('click', () => sessionStorage.setItem(key, JSON.stringify({url: location.href, scrollY: window.scrollY})));
                 });
             }
         });

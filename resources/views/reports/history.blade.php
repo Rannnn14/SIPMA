@@ -86,7 +86,7 @@
                     <h5 class="m-0 font-weight-bold text-white" style="font-size: 1.25rem; letter-spacing: -0.2px;">
                         {{ auth()->user()->isKajur() ? 'Data Laporan' : 'Riwayat Hasil Verifikasi' }}
                     </h5>
-                    <small class="text-white-50">Daftar seluruh laporan pelanggaran mahasiswa yang telah melalui proses verifikasi dan tindak lanjut.</small>
+                    <small class="text-white-50">{{ auth()->user()->isKajur() ? 'Daftar laporan yang telah diverifikasi oleh Kemahasiswaan untuk jurusan Anda.' : 'Daftar seluruh laporan pelanggaran mahasiswa yang telah melalui proses verifikasi.' }} Periode: {{ $selectedAcademicYear === 'all' ? 'Semua TA' : 'T.A. ' . $selectedAcademicYear }}</small>
                 </div>
             </div>
         </div>
@@ -155,16 +155,16 @@
                 </h6>
             </div>
             <div class="d-flex align-items-center" style="gap: 10px;">
-                <a href="{{ route('reports.export.excel') }}" class="btn btn-sm font-weight-bold px-3 py-1.5 text-white d-inline-flex align-items-center" style="background: #059669; border-radius: 8px; font-size: 0.82rem;" title="Download Data Laporan Excel/CSV">
-                    <i class="fas fa-file-excel mr-1.5"></i> Export Excel
+                <a href="{{ route('reports.export.excel') }}" class="btn btn-sm font-weight-bold p-2 text-white d-inline-flex align-items-center justify-content-center" style="background: #059669; border-radius: 8px; font-size: 0.95rem; min-width: 40px; min-height: 40px;" title="Export Excel" aria-label="Export Excel">
+                    <i class="fas fa-file-excel" aria-hidden="true"></i>
                 </a>
                 <span class="badge badge-success px-3 py-1.5 font-weight-bold" style="background:#ecfdf5; color:#059669; border: 1px solid #d1fae5; border-radius: 20px; font-size: 0.8rem;">
-                    <i class="fas fa-check-double mr-1"></i> {{ $reports->total() }} Hasil Verifikasi
+                    <i class="fas fa-check-double mr-1"></i> {{ $reports->count() }} Hasil Verifikasi
                 </span>
             </div>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive report-list-scroll">
             <table class="table history-table mb-0">
                 <thead>
                     <tr>
@@ -225,15 +225,10 @@
 
                         <!-- Status Hasil Verifikasi -->
                         <td class="text-center">
-                            @if($report->status === 'ditolak')
-                                <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.78rem;">
-                                    <i class="fas fa-times-circle mr-1"></i> Ditolak
-                                </span>
-                            @else
-                                <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; border-radius: 8px; font-size: 0.78rem;">
-                                    <i class="fas fa-check-circle mr-1"></i> Terverifikasi
-                                </span>
-                            @endif
+                            <span class="report-status-badge {{ $report->status_badge_class }}">
+                                <span class="report-status-icon"><i class="fas {{ $report->status === 'ditolak' ? 'fa-times' : 'fa-check' }}"></i></span>
+                                {{ $report->status_label }}
+                            </span>
                         </td>
 
                         <!-- Aksi -->
@@ -260,11 +255,29 @@
             </table>
         </div>
 
-        @if($reports->hasPages())
-        <div class="p-3 border-top bg-light d-flex justify-content-end">
-            {{ $reports->links() }}
-        </div>
-        @endif
     </div>
+    <script>
+        (() => {
+            const key = 'sipma-last-list:' + location.pathname;
+            if (new URLSearchParams(location.search).has('restore_position')) {
+                const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
+                if (saved?.url) history.replaceState(null, '', saved.url);
+                requestAnimationFrame(() => {
+                    const list = document.querySelector('.report-list-scroll');
+                    if (list && saved?.listScrollTop) list.scrollTop = saved.listScrollTop;
+                    else if (saved?.scrollY) window.scrollTo(0, saved.scrollY);
+                });
+                sessionStorage.removeItem(key);
+                return;
+            }
+            document.querySelectorAll('a[href*="/laporan/"]').forEach(link => {
+                if (!link.href.includes('return_to=')) return;
+                link.addEventListener('click', () => {
+                    const list = document.querySelector('.report-list-scroll');
+                    sessionStorage.setItem(key, JSON.stringify({url: location.href, scrollY: window.scrollY, listScrollTop: list?.scrollTop || 0}));
+                });
+            });
+        })();
+    </script>
 </x-layout>
 

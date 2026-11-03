@@ -9,6 +9,27 @@ use App\Models\AcademicYear;
 
 class DashboardController extends Controller
 {
+    private function selectedAcademicYear(Request $request, string $default): string
+    {
+        $key = 'selected_academic_year_' . Auth::id();
+        $selected = (string) $request->input('academic_year', session($key, $default));
+        if ($request->has('academic_year') || !session()->has($key)) {
+            session([$key => $selected]);
+        }
+
+        return $selected;
+    }
+
+    private const VERIFIED_REPORT_STATUSES = [
+        'dikonfirmasi',
+        'diverifikasi_kaprodi',
+        'diteruskan_kemahasiswaan',
+        'diproses',
+        'sedang_diproses',
+        'sanksi_ditetapkan',
+        'selesai',
+    ];
+
     /**
      * Redirect to the dedicated dashboard according to user's role.
      */
@@ -74,7 +95,7 @@ class DashboardController extends Controller
         $activeAcademicYear = AcademicYear::getActiveYear();
 
         // If academic_year is provided in URL, use it; otherwise default to active academic year (2026/2027)
-        $selectedAcademicYear = $request->has('academic_year') ? $request->get('academic_year') : $activeAcademicYear;
+        $selectedAcademicYear = $this->selectedAcademicYear($request, $activeAcademicYear);
 
         // Suggested next academic year for the add-modal
         $latestYear = $academicYears->first()?->year ?? '2026/2027';
@@ -98,7 +119,7 @@ class DashboardController extends Controller
         // 3. Overall KPI Metrics: 3 Metrik Sederhana
         $totalReports = $allReports->count();
         $pendingCount = $allReports->whereIn('status', ['pending', 'dilaporkan'])->count();
-        $verifiedCount = $allReports->whereNotIn('status', ['pending', 'dilaporkan'])->count();
+        $verifiedCount = $allReports->whereNotIn('status', ['pending', 'dilaporkan', 'ditolak'])->count();
         $confirmedCount = $allReports->whereIn('status', ['dikonfirmasi', 'diverifikasi_kaprodi', 'diteruskan_kemahasiswaan'])->count();
         $rejectedCount = $allReports->where('status', 'ditolak')->count();
         $inProgressCount = $allReports->whereIn('status', ['diproses', 'sedang_diproses'])->count();
@@ -117,13 +138,14 @@ class DashboardController extends Controller
                 $rDept = $r->reported_department ?: $r->target_department;
                 return in_array($rDept, $depts);
             });
+            $verifiedFacReports = $facReports->whereIn('status', self::VERIFIED_REPORT_STATUSES);
 
-            $facultyCounts[$facName] = $facReports->count();
+            $facultyCounts[$facName] = $verifiedFacReports->count();
 
             // Department breakdown within this faculty
             $deptBreakdown = [];
             foreach ($depts as $deptName) {
-                $deptBreakdown[$deptName] = $facReports->filter(function ($r) use ($deptName) {
+                $deptBreakdown[$deptName] = $verifiedFacReports->filter(function ($r) use ($deptName) {
                     return ($r->reported_department === $deptName) || ($r->target_department === $deptName);
                 })->count();
             }
@@ -133,11 +155,12 @@ class DashboardController extends Controller
                 'name' => $facName,
                 'departments' => $depts,
                 'total' => $facReports->count(),
-                'ringan' => $facReports->where('severity', 'Ringan')->count(),
-                'sedang' => $facReports->where('severity', 'Sedang')->count(),
-                'berat' => $facReports->where('severity', 'Berat')->count(),
+                'ringan' => $verifiedFacReports->where('severity', 'Ringan')->count(),
+                'sedang' => $verifiedFacReports->where('severity', 'Sedang')->count(),
+                'berat' => $verifiedFacReports->where('severity', 'Berat')->count(),
                 'pending' => $facReports->whereIn('status', ['pending', 'dilaporkan'])->count(),
-                'verified' => $facReports->whereNotIn('status', ['pending', 'dilaporkan'])->count(),
+                'verified' => $verifiedFacReports->count(),
+                'rejected' => $facReports->where('status', 'ditolak')->count(),
                 'diproses' => $facReports->whereIn('status', ['diproses', 'sedang_diproses', 'dikonfirmasi'])->count(),
                 'selesai' => $facReports->whereIn('status', ['selesai', 'sanksi_ditetapkan'])->count(),
                 'deptBreakdown' => $deptBreakdown,
@@ -150,13 +173,14 @@ class DashboardController extends Controller
 
         // 5. Severity distribution (Ringan, Sedang, Berat)
         $severityCounts = [
-            'Ringan' => $allReports->where('severity', 'Ringan')->count(),
-            'Sedang' => $allReports->where('severity', 'Sedang')->count(),
-            'Berat' => $allReports->where('severity', 'Berat')->count(),
+            'Ringan' => $allReports->whereIn('status', self::VERIFIED_REPORT_STATUSES)->where('severity', 'Ringan')->count(),
+            'Sedang' => $allReports->whereIn('status', self::VERIFIED_REPORT_STATUSES)->where('severity', 'Sedang')->count(),
+            'Berat' => $allReports->whereIn('status', self::VERIFIED_REPORT_STATUSES)->where('severity', 'Berat')->count(),
         ];
 
         // 6. Inbox Cepat Laporan Menunggu Verifikasi
         $pendingReports = ViolationReport::whereIn('status', ['pending', 'dilaporkan'])
+            ->when($selectedAcademicYear !== 'all', fn($q) => $q->where('academic_year', $selectedAcademicYear))
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
@@ -267,13 +291,13 @@ class DashboardController extends Controller
         // ── Tahun Akademik Filter ──
         $academicYears = AcademicYear::orderByDesc('is_active')->orderByDesc('year')->get();
         $activeAcademicYear = AcademicYear::where('is_active', true)->first();
-        $selectedAcademicYear = $request->input('academic_year', $activeAcademicYear?->year ?? 'all');
+        $selectedAcademicYear = $this->selectedAcademicYear($request, $activeAcademicYear?->year ?? 'all');
 
         // ── Query laporan HANYA yang sudah diverifikasi (dikonfirmasi) untuk jurusan ini ──
         $query = ViolationReport::where(function ($q) use ($myDept) {
             $q->where('target_department', $myDept)
               ->orWhere('reported_department', $myDept);
-        })->whereNotIn('status', ['pending', 'dilaporkan', 'ditolak']);
+        })->whereIn('status', self::VERIFIED_REPORT_STATUSES);
 
         if ($selectedAcademicYear !== 'all') {
             $query->where('academic_year', $selectedAcademicYear);
@@ -290,11 +314,13 @@ class DashboardController extends Controller
         ];
 
         // ── Cek notifikasi laporan baru (belum dilihat di Data Laporan) ──
-        $lastViewed = session('kajur_last_viewed_reports_' . $user->id, 0);
+        $yearKey = str_replace('/', '-', $selectedAcademicYear);
+        $lastViewed = session('kajur_last_viewed_reports_' . $user->id . '_' . $yearKey, 0);
         $latestReport = ViolationReport::where(function ($q) use ($myDept) {
             $q->where('target_department', $myDept)
               ->orWhere('reported_department', $myDept);
-        })->whereNotIn('status', ['pending', 'dilaporkan', 'ditolak'])
+        })->whereIn('status', self::VERIFIED_REPORT_STATUSES)
+          ->when($selectedAcademicYear !== 'all', fn($q) => $q->where('academic_year', $selectedAcademicYear))
           ->orderByDesc('verified_at')
           ->first();
 
@@ -305,7 +331,8 @@ class DashboardController extends Controller
             ? ViolationReport::where(function ($q) use ($myDept) {
                 $q->where('target_department', $myDept)
                   ->orWhere('reported_department', $myDept);
-            })->whereNotIn('status', ['pending', 'dilaporkan', 'ditolak'])
+            })->whereIn('status', self::VERIFIED_REPORT_STATUSES)
+              ->when($selectedAcademicYear !== 'all', fn($q) => $q->where('academic_year', $selectedAcademicYear))
               ->whereRaw('UNIX_TIMESTAMP(verified_at) > ?', [$lastViewed])
               ->count()
             : 0;
@@ -314,7 +341,7 @@ class DashboardController extends Controller
         $recentCases = ViolationReport::where(function ($q) use ($myDept) {
             $q->where('target_department', $myDept)
               ->orWhere('reported_department', $myDept);
-        })->whereNotIn('status', ['pending', 'dilaporkan', 'ditolak'])
+        })->whereIn('status', self::VERIFIED_REPORT_STATUSES)
           ->when($selectedAcademicYear !== 'all', fn($q) => $q->where('academic_year', $selectedAcademicYear))
           ->orderBy('verified_at', 'desc')
           ->take(5)
@@ -336,16 +363,19 @@ class DashboardController extends Controller
      * 4. Dashboard Dekan (Monitoring Fakultas - Read Only)
      * Route: /dekan/dashboard
      */
-    public function dekan()
+    public function dekan(Request $request)
     {
         $user = Auth::user();
+        $academicYears = AcademicYear::orderByDesc('year')->get();
+        $selectedAcademicYear = $this->selectedAcademicYear($request, AcademicYear::getActiveYear());
         $myFaculty = $user->faculty ?? (array_key_first(ReportController::facultyDepartmentMap()) ?? '');
         $facultyDepts = array_keys(array_filter(ReportController::departmentFacultyMap(), fn($f) => $f === $myFaculty));
 
         $facultyReports = ViolationReport::where(function ($q) use ($facultyDepts) {
             $q->whereIn('target_department', $facultyDepts)
               ->orWhereIn('reported_department', $facultyDepts);
-        })->get();
+        })->when($selectedAcademicYear !== 'all', fn($q) => $q->where('academic_year', $selectedAcademicYear))->get();
+        $verifiedFacultyReports = $facultyReports->whereIn('status', self::VERIFIED_REPORT_STATUSES);
 
         $totalFacultyReports = $facultyReports->count();
         $completedCount = $facultyReports->where('status', 'selesai')->count();
@@ -355,17 +385,17 @@ class DashboardController extends Controller
         // Grafik Pelanggaran Fakultas (Perbandingan antar Jurusan di fakultasnya)
         $deptStats = [];
         foreach ($facultyDepts as $dept) {
-            $deptStats[$dept] = $facultyReports->filter(function($r) use ($dept) {
+            $deptStats[$dept] = $verifiedFacultyReports->filter(function($r) use ($dept) {
                 return ($r->target_department === $dept) || ($r->reported_department === $dept);
             })->count();
         }
 
         // Grafik Jenis Pelanggaran Fakultas
         $severityCounts = [
-            'Ringan' => $facultyReports->where('severity', 'Ringan')->count(),
-            'Sedang' => $facultyReports->where('severity', 'Sedang')->count(),
-            'Berat' => $facultyReports->where('severity', 'Berat')->count(),
-            'Suspek' => $facultyReports->where('severity', 'Suspek')->count(),
+            'Ringan' => $verifiedFacultyReports->where('severity', 'Ringan')->count(),
+            'Sedang' => $verifiedFacultyReports->where('severity', 'Sedang')->count(),
+            'Berat' => $verifiedFacultyReports->where('severity', 'Berat')->count(),
+            'Suspek' => $verifiedFacultyReports->where('severity', 'Suspek')->count(),
         ];
 
         arsort($deptStats);
@@ -378,7 +408,9 @@ class DashboardController extends Controller
             'inProgressCount',
             'pendingCount',
             'deptStats',
-            'severityCounts'
+            'severityCounts',
+            'academicYears',
+            'selectedAcademicYear'
         ));
     }
 
@@ -392,9 +424,7 @@ class DashboardController extends Controller
         $myFaculty = $user->faculty ?? (array_key_first(ReportController::facultyDepartmentMap()) ?? '');
         $academicYears = AcademicYear::orderBy('year', 'desc')->get();
         $activeAcademicYear = AcademicYear::getActiveYear();
-        $selectedAcademicYear = $request->has('academic_year')
-            ? $request->get('academic_year')
-            : $activeAcademicYear;
+        $selectedAcademicYear = $this->selectedAcademicYear($request, $activeAcademicYear);
         $facultyDepts = array_keys(array_filter(ReportController::departmentFacultyMap(), fn($f) => $f === $myFaculty));
 
         $reportsQuery = ViolationReport::where(function ($q) use ($facultyDepts) {
@@ -405,16 +435,17 @@ class DashboardController extends Controller
             $reportsQuery->where('academic_year', $selectedAcademicYear);
         }
         $facultyReports = $reportsQuery->get();
+        $verifiedFacultyReports = $facultyReports->whereIn('status', self::VERIFIED_REPORT_STATUSES);
 
         $totalFacultyReports = $facultyReports->count();
         $completedCount = $facultyReports->where('status', 'selesai')->count();
         $inProgressCount = $facultyReports->whereIn('status', ['dikonfirmasi', 'diproses'])->count();
         $pendingCount = $facultyReports->whereIn('status', ['pending', 'dilaporkan'])->count();
-        $verifiedCount = $facultyReports->whereNotIn('status', ['pending', 'dilaporkan'])->count();
+        $verifiedCount = $verifiedFacultyReports->count();
 
         $deptStats = [];
         foreach ($facultyDepts as $dept) {
-            $deptStats[$dept] = $facultyReports->filter(function($r) use ($dept) {
+            $deptStats[$dept] = $verifiedFacultyReports->filter(function($r) use ($dept) {
                 return ($r->target_department === $dept) || ($r->reported_department === $dept);
             })->count();
         }
@@ -423,7 +454,7 @@ class DashboardController extends Controller
         // Breakdown severity per jurusan untuk modal detail
         $deptBreakdown = [];
         foreach ($facultyDepts as $dept) {
-            $deptReports = $facultyReports->filter(function($r) use ($dept) {
+            $deptReports = $verifiedFacultyReports->filter(function($r) use ($dept) {
                 return ($r->target_department === $dept) || ($r->reported_department === $dept);
             });
             $deptBreakdown[$dept] = [
@@ -435,9 +466,9 @@ class DashboardController extends Controller
         }
 
         $severityCounts = [
-            'Ringan' => $facultyReports->where('severity', 'Ringan')->count(),
-            'Sedang' => $facultyReports->where('severity', 'Sedang')->count(),
-            'Berat'  => $facultyReports->where('severity', 'Berat')->count(),
+            'Ringan' => $verifiedFacultyReports->where('severity', 'Ringan')->count(),
+            'Sedang' => $verifiedFacultyReports->where('severity', 'Sedang')->count(),
+            'Berat'  => $verifiedFacultyReports->where('severity', 'Berat')->count(),
         ];
 
         return view('dashboard.wadek3', compact(
@@ -464,9 +495,7 @@ class DashboardController extends Controller
     {
         $academicYears = AcademicYear::orderBy('year', 'desc')->get();
         $activeAcademicYear = AcademicYear::getActiveYear();
-        $selectedAcademicYear = $request->has('academic_year')
-            ? $request->get('academic_year')
-            : $activeAcademicYear;
+        $selectedAcademicYear = $this->selectedAcademicYear($request, $activeAcademicYear);
 
         $reportsQuery = ViolationReport::with(['student', 'reporter'])->orderBy('created_at', 'desc');
         if ($selectedAcademicYear && $selectedAcademicYear !== 'all') {
@@ -475,7 +504,8 @@ class DashboardController extends Controller
         $allReports = $reportsQuery->get();
         $totalReports = $allReports->count();
         $pendingCount = $allReports->whereIn('status', ['pending', 'dilaporkan'])->count();
-        $verifiedCount = $allReports->whereNotIn('status', ['pending', 'dilaporkan'])->count();
+        $verifiedCount = $allReports->whereNotIn('status', ['pending', 'dilaporkan', 'ditolak'])->count();
+        $verifiedReports = $allReports->whereIn('status', self::VERIFIED_REPORT_STATUSES);
 
         // Rekap fakultas mengikuti cara Kemahasiswaan mengelompokkan data.
         $facultyCounts = [];
@@ -486,11 +516,12 @@ class DashboardController extends Controller
                 $department = $report->reported_department ?: $report->target_department;
                 return in_array($department, $facultyDepartments, true);
             })->values();
+            $verifiedFacultyReports = $facultyReports->whereIn('status', self::VERIFIED_REPORT_STATUSES);
 
             $deptBreakdown = [];
             $deptDetails = [];
             foreach ($facultyDepartments as $department) {
-                $departmentReports = $facultyReports->filter(fn($report) =>
+                $departmentReports = $verifiedFacultyReports->filter(fn($report) =>
                     $report->reported_department === $department || $report->target_department === $department
                 );
                 $deptBreakdown[$department] = $departmentReports->count();
@@ -502,15 +533,16 @@ class DashboardController extends Controller
                 ];
             }
 
-            $facultyCounts[$facultyName] = $facultyReports->count();
+            $facultyCounts[$facultyName] = $verifiedFacultyReports->count();
             $facultyStats[$facultyName] = [
                 'departments' => $facultyDepartments,
                 'total' => $facultyReports->count(),
-                'ringan' => $facultyReports->where('severity', 'Ringan')->count(),
-                'sedang' => $facultyReports->where('severity', 'Sedang')->count(),
-                'berat' => $facultyReports->where('severity', 'Berat')->count(),
+                'ringan' => $verifiedFacultyReports->where('severity', 'Ringan')->count(),
+                'sedang' => $verifiedFacultyReports->where('severity', 'Sedang')->count(),
+                'berat' => $verifiedFacultyReports->where('severity', 'Berat')->count(),
                 'pending' => $facultyReports->whereIn('status', ['pending', 'dilaporkan'])->count(),
-                'verified' => $facultyReports->whereNotIn('status', ['pending', 'dilaporkan'])->count(),
+                'verified' => $verifiedFacultyReports->count(),
+                'rejected' => $facultyReports->where('status', 'ditolak')->count(),
                 'deptBreakdown' => $deptBreakdown,
                 'deptDetails' => collect($deptDetails)->sortByDesc('total')->all(),
                 'reports' => $facultyReports,
@@ -526,9 +558,9 @@ class DashboardController extends Controller
 
         // Komposisi Kategori Pelanggaran
         $severityCounts = [
-            'Ringan' => $allReports->where('severity', 'Ringan')->count(),
-            'Sedang' => $allReports->where('severity', 'Sedang')->count(),
-            'Berat' => $allReports->where('severity', 'Berat')->count(),
+            'Ringan' => $verifiedReports->where('severity', 'Ringan')->count(),
+            'Sedang' => $verifiedReports->where('severity', 'Sedang')->count(),
+            'Berat' => $verifiedReports->where('severity', 'Berat')->count(),
         ];
 
         return view('dashboard.warek', compact(

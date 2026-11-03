@@ -2,14 +2,27 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <script>
+        (function () {
+            const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+            const mobilePlatform = /Android|iPhone|iPad/i.test(navigator.userAgentData?.platform || navigator.platform || '');
+            const hasTouch = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+            const compactTouchScreen = hasTouch
+                && Math.max(window.screen.width, window.screen.height) <= 1200;
+            if (mobileUserAgent || mobilePlatform || compactTouchScreen) {
+                document.documentElement.classList.add('sipma-mobile-device');
+            }
+        })();
+    </script>
     <title>{{ $title ?? 'SIPMA | Sistem Pendataan Pelanggaran Mahasiswa' }}</title>
-    <link rel="icon" type="image/png" href="{{ asset('img/sipma-emblem.png') }}?v=20261024-4">
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}?v=20261027-3">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v=20261027-3">
     
     <!-- FontAwesome & Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom-app.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/custom-app.css') }}?v=20261028-mobile-profile-match-1" rel="stylesheet">
 
     <!-- Chart.js for Dashboards (Local Bundle, Fast & Offline-Safe) -->
     <script src="{{ asset('vendor/chart.js/chart.umd.js') }}"></script>
@@ -350,22 +363,8 @@
         </button>
 
         <ul class="navbar-nav sidebar sidebar-dark accordion" id="accordionSidebar">
-            <a class="sidebar-brand d-flex align-items-center justify-content-center py-4" href="{{ $dashboardRoute }}">
-                <div class="sidebar-brand-icon mr-2">
-                    <img src="{{ asset('img/sipma-emblem.png') }}?v=20261024-4" alt="Lambang SIPMA" style="width:42px;height:42px;object-fit:contain;object-position:center;border-radius:12px;background:transparent;">
-                </div>
-                <div class="sidebar-brand-text text-left">
-                    <div class="font-weight-bold" style="font-size: 1.15rem; line-height: 1.2;">SIPMA</div>
-                    <div class="text-xs text-white-50 font-weight-normal">
-                        @if(auth()->user()->isKemahasiswaan())
-                            Super Admin Kampus
-                        @elseif(auth()->user()->isKajur())
-                            Jurusan {{ auth()->user()->department }}
-                        @else
-                            Universitas
-                        @endif
-                    </div>
-                </div>
+            <a class="sidebar-brand d-flex align-items-center justify-content-center py-3" href="{{ $dashboardRoute }}" aria-label="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa">
+                <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261027-4" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa" style="display:block;width:100%;max-width:190px;height:88px;object-fit:contain;">
             </a>
 
             <hr class="sidebar-divider my-0">
@@ -411,8 +410,8 @@
                 </a>
             </li>
             @elseif(auth()->user()->isKajur())
-            <li class="nav-item {{ request()->routeIs('reports.history') ? 'active' : '' }}">
-                <a class="nav-link" href="{{ route('reports.history') }}">
+            <li class="nav-item {{ request()->routeIs('reports.index') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('reports.index') }}">
                     <i class="fas fa-clipboard-list text-info"></i>
                     <span>Data Laporan</span>
                 </a>
@@ -428,7 +427,7 @@
 
             @if(auth()->user()->isKemahasiswaan())
             <hr class="sidebar-divider">
-            <div class="sidebar-heading">Profil</div>
+            <div class="sidebar-heading">Akun</div>
             <li class="nav-item {{ request()->routeIs('kemahasiswaan.accounts.*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('kemahasiswaan.accounts.index') }}">
                     <i class="fas fa-users-cog text-primary"></i>
@@ -453,8 +452,8 @@
             <li class="sidebar-user-panel list-unstyled">
                 <div class="d-flex align-items-center mb-2 px-1">
                     <div class="sidebar-user-avatar d-flex align-items-center justify-content-center mr-2 flex-shrink-0">
-                        @if (auth()->user()->clean_name !== '')
-                            {{ mb_strtoupper(mb_substr(auth()->user()->clean_name, 0, 1)) }}
+                        @if (auth()->user()->display_name !== '')
+                            {{ mb_strtoupper(mb_substr(auth()->user()->display_name, 0, 1)) }}
                         @else
                             <i class="fas fa-user" aria-hidden="true"></i>
                         @endif
@@ -462,15 +461,18 @@
                     <div class="min-w-0" style="min-width: 0;">
                         @if (auth()->user()->isKemahasiswaan())
                             <div class="d-flex align-items-center" style="gap:5px;">
-                                <div class="sidebar-user-name font-weight-bold text-truncate" style="font-size: 0.7rem;">{{ in_array(mb_strtolower(auth()->user()->clean_name), ['', 'bagian kemahasiswaan', 'admin kemahasiswaan'], true) ? 'Kemahasiswaan' : auth()->user()->clean_name }}</div>
+                                <div class="sidebar-user-name font-weight-bold text-truncate" style="font-size: 0.7rem;">{{ auth()->user()->display_name }}</div>
                                 <button type="button" class="btn btn-link p-0 text-white-50" style="font-size:.62rem;line-height:1;" data-toggle="modal" data-target="#editOwnNameModal" title="Edit nama" aria-label="Edit nama Kemahasiswaan"><i class="fas fa-pencil-alt"></i></button>
                             </div>
                             <div class="sidebar-user-email" style="font-size: 0.62rem; color: #99f6e4;">{{ auth()->user()->username }}</div>
                         @elseif (auth()->user()->isKajur())
-                            <div class="sidebar-user-name font-weight-bold" style="font-size: 0.7rem;">{{ auth()->user()->clean_name }}</div>
+                            <div class="d-flex align-items-center" style="gap:5px;">
+                                <div class="sidebar-user-name font-weight-bold text-truncate" style="font-size: 0.7rem;">{{ auth()->user()->display_name }}</div>
+                                <button type="button" class="btn btn-link p-0 text-white-50" style="font-size:.62rem;line-height:1;" data-toggle="modal" data-target="#editOwnNameModal" title="Edit nama" aria-label="Edit nama Ketua Jurusan"><i class="fas fa-pencil-alt"></i></button>
+                            </div>
                             <div class="sidebar-user-email" style="font-size: 0.62rem; color: #99f6e4;">{{ auth()->user()->username }}</div>
                         @else
-                            <div class="sidebar-user-name font-weight-bold" style="font-size: 0.7rem;">{{ auth()->user()->clean_name }}</div>
+                            <div class="sidebar-user-name font-weight-bold" style="font-size: 0.7rem;">{{ auth()->user()->display_name }}</div>
                             <div class="sidebar-user-email" style="font-size: 0.62rem; color: #99f6e4;">{{ auth()->user()->email }}</div>
                         @endif
                     </div>
@@ -483,28 +485,57 @@
                 </form>
             </li>
         </ul>
+        <nav class="sipma-mobile-nav" aria-label="Navigasi utama">
+            <a class="sipma-mobile-nav-item {{ request()->routeIs('*.dashboard') || request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ $dashboardRoute }}">
+                <i class="fas fa-home" aria-hidden="true"></i><span>Beranda</span>
+            </a>
+            @if(auth()->user()->isKemahasiswaan() || auth()->user()->isKajur())
+            <a class="sipma-mobile-nav-item {{ request()->routeIs('reports.create') ? 'active' : '' }}" href="{{ route('reports.create') }}">
+                <i class="fas fa-paper-plane" aria-hidden="true"></i><span>Pelaporan</span>
+            </a>
+            @endif
+            @if(auth()->user()->isKemahasiswaan())
+            <a class="sipma-mobile-nav-item {{ request()->routeIs('reports.inbox') ? 'active' : '' }}" href="{{ route('reports.inbox') }}">
+                <i class="fas fa-inbox" aria-hidden="true"></i><span>Inbox</span>
+            </a>
+            @endif
+            @if(auth()->user()->isKemahasiswaan() || auth()->user()->isKajur())
+            <a class="sipma-mobile-nav-item {{ (auth()->user()->isKajur() && request()->routeIs('reports.index')) || (auth()->user()->isKemahasiswaan() && request()->routeIs('reports.history')) ? 'active' : '' }}" href="{{ auth()->user()->isKajur() ? route('reports.index') : route('reports.history') }}">
+                <i class="fas fa-clipboard-list" aria-hidden="true"></i><span>{{ auth()->user()->isKajur() ? 'Data' : 'Riwayat' }}</span>
+            </a>
+            @else
+            <a class="sipma-mobile-nav-item {{ request()->routeIs('reports.index') ? 'active' : '' }}" href="{{ route('reports.index') }}">
+                <i class="fas fa-chart-bar" aria-hidden="true"></i><span>Rekap</span>
+            </a>
+            @endif
+            @if(auth()->user()->isKemahasiswaan())
+            <a class="sipma-mobile-nav-item {{ request()->routeIs('kemahasiswaan.accounts.*') ? 'active' : '' }}" href="{{ route('kemahasiswaan.accounts.index') }}">
+                <i class="fas fa-users-cog" aria-hidden="true"></i><span>Akun</span>
+            </a>
+            @endif
+        </nav>
         @endif
         @endauth
         <!-- End Sidebar -->
 
         @auth
-            @if (auth()->user()->isKemahasiswaan())
+            @if (auth()->user()->isKemahasiswaan() || auth()->user()->isKajur())
                 <div class="modal fade" id="editOwnNameModal" tabindex="-1" role="dialog" aria-labelledby="editOwnNameTitle" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered" role="document">
-                        <form method="POST" action="{{ route('kemahasiswaan.profile.name.update') }}" class="modal-content border-0 shadow-lg" style="border-radius:16px;overflow:hidden;">
+                        <form method="POST" action="{{ auth()->user()->isKajur() ? route('kajur.profile.name.update') : route('kemahasiswaan.profile.name.update') }}" class="modal-content border-0 shadow-lg" style="border-radius:16px;overflow:hidden;">
                             @csrf
                             @method('PUT')
                             <input type="hidden" name="profile_name_form" value="1">
                             <div class="modal-header text-white border-0" style="background:linear-gradient(110deg,#134e4a,#0d9488);">
                                 <div>
                                     <h5 class="modal-title font-weight-bold mb-1" id="editOwnNameTitle"><i class="fas fa-user-edit mr-2"></i>Edit Nama</h5>
-                                    <small class="text-white-50">Ubah nama yang tampil di profil Kemahasiswaan.</small>
+                                    <small class="text-white-50">Ubah nama yang tampil di profil Anda.</small>
                                 </div>
                                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                             </div>
                             <div class="modal-body p-4">
-                                <label for="kemahasiswaanDisplayName" class="font-weight-bold">Nama</label>
-                                <input type="text" id="kemahasiswaanDisplayName" name="name" value="{{ old('profile_name_form') ? old('name') : auth()->user()->clean_name }}" class="form-control @error('name') is-invalid @enderror" maxlength="100" required placeholder="Masukkan nama">
+                                <label for="profileDisplayName" class="font-weight-bold">Nama</label>
+                                <input type="text" id="profileDisplayName" name="name" value="{{ old('profile_name_form') ? old('name') : auth()->user()->clean_name }}" class="form-control @error('name') is-invalid @enderror" maxlength="100" required placeholder="Masukkan nama">
                                 @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="modal-footer bg-light border-0">
@@ -529,12 +560,12 @@
             <nav class="navbar navbar-expand navbar-light bg-white topbar static-top shadow-sm px-3 px-sm-4 justify-content-between" style="border-bottom: 1px solid #e2e8f0;">
                 <div class="d-flex align-items-center">
                     <a href="{{ route('mahasiswa.dashboard') }}" class="d-flex align-items-center text-decoration-none">
-                        <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261024-4" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa" style="display:block;width:125px;height:auto;object-fit:contain;">
+                        <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261027-1" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa" style="display:block;width:125px;height:auto;object-fit:contain;">
                     </a>
                 </div>
                 <div class="d-flex align-items-center">
                     <div class="text-right mr-3">
-                        <div class="font-weight-bold text-dark small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ auth()->user()->clean_name }}</div>
+                        <div class="font-weight-bold text-dark small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ auth()->user()->display_name }}</div>
                         <div class="text-xs text-muted font-weight-bold">{{ auth()->user()->nim ?? (auth()->user()->student?->nim ?? '2024001') }}</div>
                     </div>
                     <form method="POST" action="{{ route('logout') }}" class="mb-0">
@@ -551,7 +582,7 @@
                 <!-- Kiri: Logo SIPMA & Judul "Dashboard Monitoring" -->
                 <div class="d-flex align-items-center">
                     <a href="{{ auth()->user()->isWadek3() ? route('wadek3.dashboard') : (auth()->user()->isWarek() ? route('warek.dashboard') : route('dekan.dashboard')) }}" class="d-flex align-items-center text-decoration-none">
-                        <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261024-4" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa" style="display:block;width:125px;height:auto;object-fit:contain;">
+                        <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261027-1" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa" style="display:block;width:125px;height:auto;object-fit:contain;">
                     </a>
                 </div>
 
@@ -562,7 +593,7 @@
                             {{ auth()->user()->isWadek3() ? 'Wakil Dekan III' : (auth()->user()->isWarek() ? 'Wakil Rektor III' : 'Dekan') }}
                         </div>
                         <div class="text-xs font-weight-bold" style="color: #0d9488; line-height: 1.2;">
-                            {{ auth()->user()->isWarek() ? 'Universitas' : (auth()->user()->faculty ?? 'Fakultas') }}
+                            {{ auth()->user()->isWarek() ? 'Universitas' : \App\Http\Controllers\ReportController::facultyDisplayName(auth()->user()->faculty ?? 'Fakultas') }}
                         </div>
                     </div>
                     <form method="POST" action="{{ route('logout') }}" class="mb-0">
@@ -574,10 +605,29 @@
                 </div>
             </nav>
             @else
-            <!-- Tombol buka sidebar untuk layar kecil; tidak memakai ruang di atas konten. -->
-            <button class="btn btn-sm border-0" id="mobileSidebarToggle" aria-label="Buka menu">
-                <i class="fas fa-bars"></i>
-            </button>
+            <!-- Header ringkas untuk pengguna sidebar pada layar ponsel. -->
+            <nav class="sipma-app-topbar" aria-label="Header akun">
+                <a href="{{ $dashboardRoute }}" class="sipma-app-brand" aria-label="SIPMA — Beranda">
+                    <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261027-1" alt="SIPMA">
+                </a>
+                <div class="sipma-app-account">
+                    <div class="sipma-app-account-name" title="{{ auth()->user()->display_name }}">
+                        <span>{{ auth()->user()->display_name }}</span>
+                        <small>{{ auth()->user()->username }}</small>
+                    </div>
+                    @if(auth()->user()->isKemahasiswaan() || auth()->user()->isKajur())
+                    <button type="button" class="sipma-app-profile-edit" data-toggle="modal" data-target="#editOwnNameModal" title="Edit nama" aria-label="Edit nama profil">
+                        <i class="fas fa-pencil-alt" aria-hidden="true"></i>
+                    </button>
+                    @endif
+                    <form method="POST" action="{{ route('logout') }}" class="sipma-app-logout-form">
+                        @csrf
+                        <button type="submit" class="sipma-app-logout" aria-label="Keluar" title="Keluar">
+                            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                </div>
+            </nav>
             @endif
             @endauth
 

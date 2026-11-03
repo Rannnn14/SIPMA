@@ -62,6 +62,17 @@ class User extends Authenticatable
         return trim(preg_replace('/\s*\([^)]*\)$/', '', $this->name ?? ''));
     }
 
+    public function getDisplayNameAttribute(): string
+    {
+        $name = $this->clean_name;
+
+        if ($this->isKemahasiswaan() && in_array(mb_strtolower($name), ['', 'bagian kemahasiswaan', 'admin kemahasiswaan'], true)) {
+            return 'Kemahasiswaan';
+        }
+
+        return $name !== '' ? $name : 'Pengguna';
+    }
+
     public function getRoleTitleAttribute(): string
     {
         return match ($this->role) {

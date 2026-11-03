@@ -42,7 +42,7 @@ php artisan config:clear
 php artisan migrate
 php artisan db:seed
 php artisan storage:link
-php artisan serve
+php -d upload_max_filesize=50M -d post_max_size=210M -d upload_tmp_dir=storage/app/tmp -d sys_temp_dir=storage/app/tmp artisan serve
 ```
 
 Buka alamat yang dicetak oleh `php artisan serve`. Migrasi membuat tabel MySQL aplikasi. Seeder menambahkan data contoh untuk alur mahasiswa, Kemahasiswaan, Kajur, dan Warek. **Seeder mengosongkan data SIPMA yang sudah ada pada tabel pengguna, laporan, dan master pelanggaran.** Jalankan `php artisan db:seed` hanya pada database baru/kosong. Untuk database yang sudah berisi data, cukup jalankan `php artisan migrate`.

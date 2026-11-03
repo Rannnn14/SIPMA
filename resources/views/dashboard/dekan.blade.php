@@ -1,16 +1,26 @@
 <x-layout>
-    <x-slot:title>Dashboard Dekan {{ $myFaculty }} | SIPMA</x-slot:title>
+    <x-slot:title>Dashboard Dekan {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }} | SIPMA</x-slot:title>
 
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <div>
             <h1 class="h3 mb-1 text-gray-900 font-weight-bold">
-                <i class="fas fa-university text-warning mr-1"></i> Dashboard Dekan: {{ $myFaculty }}
+                <i class="fas fa-university text-warning mr-1"></i> Dashboard Dekan: {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }}
             </h1>
             <p class="text-muted small mb-0">Executive Monitoring & Rekapitulasi Pelanggaran Tingkat Fakultas (Hak Akses Read-Only).</p>
         </div>
 
-        <div class="mt-3 mt-sm-0">
-            <a href="{{ route('reports.export.excel') }}" class="btn btn-sm btn-success font-weight-bold shadow-sm mr-2">
+        <div class="mt-3 mt-sm-0 d-flex align-items-center flex-wrap" style="gap: 8px;">
+            <form method="GET" action="{{ route('dekan.dashboard') }}" class="m-0">
+                <select name="academic_year" class="form-control form-control-sm" aria-label="Pilih tahun akademik" onchange="this.form.submit()">
+                    <option value="all" {{ $selectedAcademicYear === 'all' ? 'selected' : '' }}>Semua Periode</option>
+                    @foreach($academicYears as $academicYear)
+                        <option value="{{ $academicYear->year }}" {{ $selectedAcademicYear === $academicYear->year ? 'selected' : '' }}>
+                            T.A. {{ $academicYear->year }}{{ $academicYear->is_active ? ' (Aktif)' : '' }}
+                        </option>
+                    @endforeach
+                </select>
+            </form>
+            <a href="{{ route('reports.export.excel') }}" class="btn btn-sm btn-success font-weight-bold shadow-sm mr-2 mobile-hide-export">
                 <i class="fas fa-file-excel mr-1"></i> Ekspor Excel
             </a>
             <a href="{{ route('reports.export.pdf') }}" target="_blank" class="btn btn-sm btn-outline-danger font-weight-bold shadow-sm">
@@ -97,7 +107,7 @@
             <div class="card shadow mb-4 h-100">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
                     <h6 class="m-0 font-weight-bold text-warning">
-                        <i class="fas fa-chart-bar mr-1"></i> Grafik Pelanggaran Jurusan di {{ $myFaculty }}
+                        <i class="fas fa-chart-bar mr-1"></i> Grafik Pelanggaran Jurusan di {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }}
                     </h6>
                     <button type="button" class="btn btn-sm btn-light border" id="expandFacultyDeptChart"><i class="fas fa-expand-alt mr-1"></i>Perbesar</button>
                 </div>
@@ -138,7 +148,7 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-dark">
-                <i class="fas fa-list-alt text-warning mr-1"></i> Rekapitulasi Data Kasus Jurusan di Bawah {{ $myFaculty }}
+                <i class="fas fa-list-alt text-warning mr-1"></i> Rekapitulasi Data Kasus Jurusan di Bawah {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }}
             </h6>
             <a href="{{ route('reports.index') }}" class="btn btn-sm btn-outline-primary font-weight-bold">
                 Lihat Seluruh Kasus <i class="fas fa-arrow-right ml-1"></i>
@@ -198,7 +208,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 900, easing: 'easeOutQuart' },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } } },
                 plugins: { legend: { display: false } }
             };
             new Chart(ctx1, {
@@ -229,8 +239,8 @@
                 options: severityChartOptions
             });
 
-            const openFacultyDept = () => openChartModal('Grafik Pelanggaran Jurusan — {{ $myFaculty }}', 'bar', allDeptLabels, [{...deptChartData.datasets[0], data: allDeptValues}], deptChartOptions);
-            const openFacultySeverity = () => openChartModal('Jenis Pelanggaran — {{ $myFaculty }}', 'doughnut', severityLabels, severityChartData.datasets, severityChartOptions);
+            const openFacultyDept = () => openChartModal('Grafik Pelanggaran Jurusan — {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }}', 'bar', allDeptLabels, [{...deptChartData.datasets[0], data: allDeptValues}], deptChartOptions);
+            const openFacultySeverity = () => openChartModal('Jenis Pelanggaran — {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }}', 'doughnut', severityLabels, severityChartData.datasets, severityChartOptions);
             document.getElementById('facultyDeptChart').addEventListener('click', openFacultyDept);
             document.getElementById('expandFacultyDeptChart').addEventListener('click', openFacultyDept);
             document.getElementById('facultySeverityChart').addEventListener('click', openFacultySeverity);

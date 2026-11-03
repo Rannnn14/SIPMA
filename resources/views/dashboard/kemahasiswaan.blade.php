@@ -351,7 +351,7 @@
         </div>
     </div>
 
-    <!-- Alert Menunggu Verifikasi Segera (jika ada) -->
+    <!-- Antrean laporan yang perlu diverifikasi -->
     @if($pendingCount > 0)
         <div class="alert border-0 shadow-sm mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3" style="background: #fffbeb; border-left: 5px solid #f59e0b !important; border-radius: 14px;">
             <div class="d-flex align-items-center mb-2 mb-md-0">
@@ -363,7 +363,7 @@
                     <small class="text-muted">Periksa kesesuaian identitas terlapor dan bukti digital sebelum diteruskan ke pimpinan terkait.</small>
                 </div>
             </div>
-            <a href="{{ route('reports.inbox') }}" class="btn btn-sm font-weight-bold px-3 py-2 text-dark shadow-sm" style="background: #fde68a; border-radius: 8px;">
+            <a href="{{ route('reports.inbox', ['academic_year' => $selectedAcademicYear]) }}" class="btn btn-sm font-weight-bold px-3 py-2 text-dark shadow-sm" style="background: #fde68a; border-radius: 8px;">
                 Buka Inbox Verifikasi <i class="fas fa-arrow-right ml-1"></i>
             </a>
         </div>
@@ -389,13 +389,13 @@
             </div>
         </div>
 
-        <!-- 2. Menunggu Verifikasi -->
+        <!-- 2. Antrean Verifikasi -->
         <div class="col-md-4 mb-3 mb-md-0">
-            <a href="{{ route('reports.inbox') }}" class="text-decoration-none">
+            <a href="{{ route('reports.inbox', ['academic_year' => $selectedAcademicYear]) }}" class="text-decoration-none">
                 <div class="card feature-card h-100 p-3" style="transition: transform 0.2s, box-shadow 0.2s;">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">Menunggu Verifikasi</div>
+                            <div class="text-xs font-weight-bold text-muted text-uppercase mb-1">Antrean Verifikasi</div>
                             <div class="h3 mb-0 font-weight-bold text-amber-600" style="color: #d97706;">{{ $pendingCount }}</div>
                             <small class="text-muted">Buka Inbox Verifikasi <i class="fas fa-arrow-right ml-1"></i></small>
                         </div>
@@ -409,7 +409,7 @@
 
         <!-- 3. Terverifikasi (Riwayat Laporan) -->
         <div class="col-md-4">
-            <a href="{{ route('reports.history') }}" class="text-decoration-none">
+            <a href="{{ route('reports.history', ['academic_year' => $selectedAcademicYear]) }}" class="text-decoration-none">
                 <div class="card feature-card h-100 p-3" style="transition: transform 0.2s, box-shadow 0.2s;">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
@@ -516,7 +516,7 @@
                                 aria-controls="tab-pane-{{ $slug }}" 
                                 aria-selected="{{ $isFirst ? 'true' : 'false' }}">
                             <i class="fas fa-graduation-cap"></i>
-                            <span>{{ $facName }}</span>
+                            <span>{{ \App\Http\Controllers\ReportController::facultyDisplayName($facName) }}</span>
                             <span class="badge-count">{{ $stats['total'] }} Kasus</span>
                         </button>
                     </li>
@@ -582,15 +582,19 @@
                                         </div>
                                     </div>
 
-                                    <!-- Status Verifikasi Sederhana (Hanya Menunggu & Terverifikasi) -->
+                                    <!-- Ringkasan status laporan -->
                                     <div class="pt-2 border-top">
                                         <div class="d-flex align-items-center justify-content-between small mb-2">
-                                            <span class="text-muted"><i class="fas fa-clock mr-1 text-warning"></i> Menunggu Verifikasi:</span>
+                                            <span class="text-muted"><i class="fas fa-clock mr-1 text-warning"></i> Antrean verifikasi:</span>
                                             <span class="badge badge-warning px-2.5 py-1 text-dark font-weight-bold" style="background: #fef3c7; color: #b45309; border-radius: 6px;">{{ $stats['pending'] }} Kasus</span>
                                         </div>
                                         <div class="d-flex align-items-center justify-content-between small">
                                             <span class="text-muted"><i class="fas fa-check-circle mr-1" style="color: #0d9488;"></i> Terverifikasi:</span>
                                             <span class="badge font-weight-bold px-2.5 py-1" style="background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; border-radius: 6px;">{{ $stats['verified'] }} Kasus</span>
+                                        </div>
+                                        <div class="d-flex align-items-center justify-content-between small mt-2">
+                                            <span class="text-muted"><i class="fas fa-times-circle mr-1 text-danger"></i> Ditolak:</span>
+                                            <span class="badge badge-danger px-2.5 py-1 font-weight-bold" style="border-radius: 6px;">{{ $stats['rejected'] }} Kasus</span>
                                         </div>
                                     </div>
                                 </div>
@@ -601,7 +605,7 @@
                         <div class="border rounded-lg overflow-hidden bg-white">
                             <div class="p-3 bg-light border-bottom d-flex flex-column flex-sm-row align-items-sm-center justify-content-between">
                                 <div class="font-weight-bold text-dark small text-uppercase mb-2 mb-sm-0">
-                                    <i class="fas fa-list-ul mr-1" style="color: #0f766e;"></i> Daftar Laporan: {{ $facName }}
+                                    <i class="fas fa-list-ul mr-1" style="color: #0f766e;"></i> Daftar Laporan: {{ \App\Http\Controllers\ReportController::facultyDisplayName($facName) }}
                                 </div>
                                 <div class="d-flex align-items-center" style="gap: 8px;">
                                     <div class="position-relative">
@@ -665,15 +669,12 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-center">
-                                                    @if(in_array($rep->status, ['pending', 'dilaporkan']))
-                                                        <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; border-radius: 8px; font-size: 0.78rem;">
-                                                            <i class="fas fa-hourglass-half mr-1"></i> Menunggu Verifikasi
+                                                    <span class="report-status-badge {{ $rep->status_badge_class }}">
+                                                        <span class="report-status-icon">
+                                                            <i class="fas {{ in_array($rep->status, ['pending', 'dilaporkan']) ? 'fa-clock' : ($rep->status === 'ditolak' ? 'fa-times' : 'fa-check') }}"></i>
                                                         </span>
-                                                    @else
-                                                        <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; border-radius: 8px; font-size: 0.78rem;">
-                                                            <i class="fas fa-check-circle mr-1"></i> Terverifikasi
-                                                        </span>
-                                                    @endif
+                                                        {{ $rep->status_label }}
+                                                    </span>
                                                 </td>
                                                 <td class="text-center">
                                                     <a href="{{ route('reports.show', ['id' => $rep->id, 'return_to' => request()->getRequestUri()]) }}" class="btn btn-sm btn-outline-secondary font-weight-bold px-3 py-1.5" style="border-radius: 8px; font-size: 0.82rem;" title="Lihat Detail">
@@ -685,7 +686,7 @@
                                             <tr>
                                                 <td colspan="7" class="text-center py-5 text-muted">
                                                     <i class="fas fa-clipboard-check fa-3x mb-2 text-muted" style="opacity: 0.35;"></i>
-                                                    <div class="font-weight-bold">Tidak ada laporan pelanggaran pada {{ $facName }}.</div>
+                                                    <div class="font-weight-bold">Tidak ada laporan pelanggaran pada {{ \App\Http\Controllers\ReportController::facultyDisplayName($facName) }}.</div>
                                                     <small class="text-muted">Data akan otomatis terisi ketika terdapat laporan baru pada fakultas ini.</small>
                                                 </td>
                                             </tr>
@@ -719,7 +720,7 @@
 
             // 1. Chart Utama: Peringkat Frekuensi Pelanggaran Antar-Fakultas (Bar Chart)
             const facCtx = document.getElementById('facultyBarChart').getContext('2d');
-            const facLabels = {!! json_encode(array_keys($facultyCounts)) !!};
+            const facLabels = {!! json_encode(array_map([\App\Http\Controllers\ReportController::class, 'facultyDisplayName'], array_keys($facultyCounts))) !!};
             const facData = {!! json_encode(array_values($facultyCounts)) !!};
             const facColors = ['#0d9488', '#0891b2', '#d97706', '#7c3aed', '#64748b'];
 
@@ -742,7 +743,7 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: { stepSize: 1, font: { size: 12 } },
+                            ticks: { precision: 0, maxTicksLimit: 6, font: { size: 12 } },
                             grid: { color: '#f1f5f9' }
                         },
                         x: {
@@ -776,7 +777,7 @@
                         'bar',
                         facLabels,
                         [{ label: 'Total Kasus Pelanggaran', data: facData, backgroundColor: facColors, borderRadius: 8 }],
-                        { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { autoSkip: false } } }, plugins: { legend: { display: false } } }
+                        { scales: { y: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } }, x: { ticks: { autoSkip: false } } }, plugins: { legend: { display: false } } }
                     );
                 });
             }
@@ -877,7 +878,7 @@
                                 scales: {
                                     x: {
                                         beginAtZero: true,
-                                        ticks: { stepSize: 1 },
+                                        ticks: { precision: 0, maxTicksLimit: 6 },
                                         grid: { color: '#f8fafc' }
                                     },
                                     y: {
@@ -898,7 +899,7 @@
                         // Expand Modal Handler shows every department.
                         const openModalHandler = function() {
                             openChartModal(
-                                'Distribusi Kasus per Jurusan — {{ addslashes($facName) }}',
+                                'Distribusi Kasus per Jurusan — {{ addslashes(\App\Http\Controllers\ReportController::facultyDisplayName($facName)) }}',
                                 'bar',
                                 allLabels,
                                 [{
@@ -907,7 +908,7 @@
                                     backgroundColor: '#0d9488',
                                     borderRadius: 6
                                 }],
-                                { indexAxis: 'y', animation: { duration: 900, easing: 'easeOutQuart' }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } }, y: { ticks: { autoSkip: false, font: { size: 12, weight: '600' } } } }, plugins: { legend: { display: false } } }
+                                { indexAxis: 'y', animation: { duration: 900, easing: 'easeOutQuart' }, scales: { x: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } }, y: { ticks: { autoSkip: false, font: { size: 12, weight: '600' } } } }, plugins: { legend: { display: false } } }
                             );
                         };
 
@@ -947,6 +948,17 @@
                     });
                 });
             });
+            const key = 'sipma-last-list:' + location.pathname;
+            if (new URLSearchParams(location.search).has('restore_position')) {
+                const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
+                if (saved?.url) history.replaceState(null, '', saved.url);
+                if (saved?.scrollY) requestAnimationFrame(() => window.scrollTo(0, saved.scrollY));
+                sessionStorage.removeItem(key);
+            } else {
+                document.querySelectorAll('a[href*="/laporan/"]').forEach(link => {
+                    if (link.href.includes('return_to=')) link.addEventListener('click', () => sessionStorage.setItem(key, JSON.stringify({url: location.href, scrollY: window.scrollY})));
+                });
+            }
         });
     </script>
 </x-layout>

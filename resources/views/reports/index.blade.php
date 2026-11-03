@@ -13,9 +13,12 @@
     {{-- ── Banner Teal Kajur ── --}}
     <style>
         .kajur-banner { background: linear-gradient(135deg, #134e4a 0%, #0d9488 60%, #14b8a6 100%); }
-        .kajur-ay-select { border: none; background: rgba(255,255,255,0.15); color: #fff;
-            font-size: 0.85rem; font-weight: 600; padding: 4px 12px; border-radius: 20px; outline: none; cursor: pointer; }
-        .kajur-ay-select option { color: #134e4a; background: #fff; }
+        .kajur-reports-table { border-collapse: separate; border-spacing: 0; color: #334155; }
+        .kajur-reports-table thead th { background: #f8fafc; color: #334155; font-size: .82rem; font-weight: 700;
+            letter-spacing: .35px; border-top: 0; border-bottom: 1.5px solid #e2e8f0; padding: 14px 16px; }
+        .kajur-reports-table tbody tr { background: #fff; transition: background-color .15s ease; }
+        .kajur-reports-table tbody tr:hover { background: #f8fafc !important; }
+        .kajur-reports-table tbody td { padding: 14px 16px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
     </style>
     <div class="card border-0 text-white shadow-sm mb-4 overflow-hidden kajur-banner">
         <div class="card-body p-4">
@@ -28,36 +31,9 @@
                     <div>
                         <h5 class="font-weight-bold text-white mb-0">Data Laporan Pelanggaran Mahasiswa</h5>
                         <small class="text-white-50">
-                            Jurusan {{ auth()->user()->department }} — Laporan terverifikasi dari Kemahasiswaan
+                            Jurusan {{ auth()->user()->department }} — Laporan terverifikasi dari Kemahasiswaan · {{ $selectedAcademicYear === 'all' ? 'Semua TA' : 'T.A. ' . $selectedAcademicYear }}
                         </small>
                     </div>
-                </div>
-                {{-- Filter T.A. --}}
-                <div class="mt-2 mt-md-0">
-                    <form method="GET" action="{{ route('reports.index') }}" class="m-0" id="kajurIndexAyForm">
-                        @if(request('search'))
-                            <input type="hidden" name="search" value="{{ request('search') }}">
-                        @endif
-                        @if(request('severity'))
-                            <input type="hidden" name="severity" value="{{ request('severity') }}">
-                        @endif
-                        <div class="d-flex align-items-center px-3 py-2 rounded-pill"
-                             style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);">
-                            <i class="fas fa-calendar-alt text-white-50 mr-2" style="font-size: 0.82rem;"></i>
-                            <select name="academic_year" class="kajur-ay-select"
-                                    onchange="document.getElementById('kajurIndexAyForm').submit()">
-                                <option value="all" style="color:#000;" {{ request('academic_year', 'all') === 'all' ? 'selected' : '' }}>
-                                    Semua Periode
-                                </option>
-                                @foreach(\App\Models\AcademicYear::orderByDesc('is_active')->orderByDesc('year')->get() as $ay)
-                                    <option value="{{ $ay->year }}" style="color:#000;"
-                                        {{ request('academic_year') === $ay->year ? 'selected' : '' }}>
-                                        T.A. {{ $ay->year }}{{ $ay->is_active ? ' (Aktif)' : '' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </form>
                 </div>
             </div>
         </div>
@@ -74,7 +50,7 @@
             </h1>
             <p class="text-muted small mb-0">
                 @if(auth()->user()->isKemahasiswaan())
-                    Validasi bukti, koreksi data manual mahasiswa terlapor, dan teruskan ke Ketua Jurusan terkait.
+                    Validasi bukti dan koreksi data mahasiswa terlapor.
                 @else
                     Monitoring rekapitulasi data dan statistik penanganan pelanggaran (Hak Akses Read-Only).
                 @endif
@@ -87,7 +63,7 @@
             </a>
             @endif
             @if(auth()->user()->isKemahasiswaan() || auth()->user()->isKajur() || auth()->user()->isDekan() || auth()->user()->isWarek())
-            <a href="{{ route('reports.export.excel') }}" class="btn btn-success shadow-sm font-weight-bold mr-2">
+            <a href="{{ route('reports.export.excel') }}" class="btn btn-success shadow-sm font-weight-bold mr-2 mobile-hide-export">
                 <i class="fas fa-file-excel mr-1"></i> Excel
             </a>
             <a href="{{ route('reports.export.pdf') }}" target="_blank" class="btn btn-outline-danger shadow-sm font-weight-bold">
@@ -112,9 +88,6 @@
         <div class="card-body py-3 bg-light">
             <form method="GET" action="{{ route('reports.index') }}" class="row align-items-center">
                 {{-- Pertahankan T.A. filter jika kajur --}}
-                @if(auth()->user()->isKajur() && request('academic_year') && request('academic_year') !== 'all')
-                    <input type="hidden" name="academic_year" value="{{ request('academic_year') }}">
-                @endif
 
                 <div class="col-md-4 mb-2 mb-md-0">
                     <input type="text" name="search" value="{{ request('search') }}"
@@ -160,15 +133,15 @@
             <h6 class="m-0 font-weight-bold text-primary">
                 <i class="fas fa-table mr-1"></i>
                 @if(auth()->user()->isKajur())
-                    Data Laporan Jurusan {{ auth()->user()->department }} ({{ $reports->total() }} Laporan)
+                    Data Laporan Jurusan {{ auth()->user()->department }} ({{ $reports->count() }} Laporan)
                 @else
-                    Data Laporan Pelanggaran ({{ $reports->total() }} Kasus)
+                    Data Laporan Pelanggaran ({{ $reports->count() }} Kasus)
                 @endif
             </h6>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" width="100%" cellspacing="0">
+            <div class="table-responsive report-list-scroll">
+                <table class="table table-hover align-middle mb-0 {{ auth()->user()->isKajur() ? 'kajur-reports-table' : '' }}" width="100%" cellspacing="0">
                     <thead class="bg-light text-dark">
                         <tr>
                             <th class="py-3">No. Laporan</th>
@@ -176,7 +149,9 @@
                             <th class="py-3">Mahasiswa Terlapor</th>
                             <th class="py-3">Jurusan Terkait</th>
                             <th class="py-3">Kategori</th>
+                            @unless(auth()->user()->isKajur())
                             <th class="py-3">Pelapor</th>
+                            @endunless
                             <th class="py-3">Status</th>
                             <th class="py-3 text-center">Aksi</th>
                         </tr>
@@ -212,31 +187,39 @@
                                         'Ringan' => 'badge-info',
                                         default  => 'badge-secondary',
                                     };
+                                    $kajurSeverityStyle = match($report->severity) {
+                                        'Berat' => 'background:#fef2f2;color:#dc2626;border:1px solid #fee2e2;',
+                                        'Sedang' => 'background:#fffbeb;color:#b45309;border:1px solid #fef3c7;',
+                                        default => 'background:#ecfdf5;color:#059669;border:1px solid #d1fae5;',
+                                    };
                                 @endphp
-                                <span class="badge {{ $sevBadge }} px-2 py-1">
+                                <span class="badge {{ auth()->user()->isKajur() ? '' : $sevBadge }} px-2 py-1" @if(auth()->user()->isKajur()) style="{{ $kajurSeverityStyle }} border-radius:8px;padding:4px 10px !important;" @endif>
                                     {{ $report->severity ?? 'Umum' }}
                                 </span>
                             </td>
+                            @unless(auth()->user()->isKajur())
                             <td class="small">
                                 <span class="{{ !auth()->user()->isKemahasiswaan() && $report->reporter_id !== auth()->id() ? 'text-muted font-italic' : 'font-weight-bold text-dark' }}">
                                     {{ $report->reporter_display_name }}
                                 </span>
                             </td>
+                            @endunless
                             <td>
-                                <span class="badge {{ $report->status_badge_class }} px-2 py-1" style="font-size:0.8rem;">
+                                <span class="report-status-badge {{ $report->status_badge_class }}">
+                                    <span class="report-status-icon"><i class="fas {{ $report->status === 'ditolak' ? 'fa-times' : 'fa-check' }}"></i></span>
                                     {{ $report->status_label }}
                                 </span>
                             </td>
                             <td class="text-center">
                                 <a href="{{ route('reports.show', ['id' => $report->id, 'return_to' => request()->getRequestUri()]) }}"
-                                   class="btn btn-sm btn-outline-primary font-weight-bold px-3">
+                                   class="btn btn-sm {{ auth()->user()->isKajur() ? 'btn-outline-secondary' : 'btn-outline-primary' }} font-weight-bold px-3">
                                     Detail <i class="fas fa-chevron-right ml-1"></i>
                                 </a>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-5">
+                            <td colspan="{{ auth()->user()->isKajur() ? 7 : 8 }}" class="text-center text-muted py-5">
                                 <i class="fas fa-folder-open fa-3x text-gray-300 mb-3 d-block"></i>
                                 Tidak ada data laporan yang sesuai kriteria pencarian.
                             </td>
@@ -246,13 +229,31 @@
                 </table>
             </div>
 
-            @if($reports->hasPages())
-            <div class="p-3 border-top d-flex justify-content-end">
-                {{ $reports->links() }}
-            </div>
-            @endif
         </div>
     </div>
 
+    <script>
+        (() => {
+            const key = 'sipma-last-list:' + location.pathname;
+            if (new URLSearchParams(location.search).has('restore_position')) {
+                const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
+                if (saved?.url) history.replaceState(null, '', saved.url);
+                requestAnimationFrame(() => {
+                    const list = document.querySelector('.report-list-scroll');
+                    if (list && saved?.listScrollTop) list.scrollTop = saved.listScrollTop;
+                    else if (saved?.scrollY) window.scrollTo(0, saved.scrollY);
+                });
+                sessionStorage.removeItem(key);
+                return;
+            }
+            document.querySelectorAll('a[href*="/laporan/"]').forEach(link => {
+                if (!link.href.includes('return_to=')) return;
+                link.addEventListener('click', () => {
+                    const list = document.querySelector('.report-list-scroll');
+                    sessionStorage.setItem(key, JSON.stringify({url: location.href, scrollY: window.scrollY, listScrollTop: list?.scrollTop || 0}));
+                });
+            });
+        })();
+    </script>
 </x-layout>
 

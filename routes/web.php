@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:kajur')->group(function () {
+        Route::put('/kajur/profil/nama', [AccountController::class, 'updateOwnName'])->name('kajur.profile.name.update');
         Route::get('/kajur/dashboard', [DashboardController::class, 'kajur'])->name('kajur.dashboard');
     });
 
@@ -70,6 +71,4 @@ Route::middleware('auth')->group(function () {
     Route::post('/laporan/{id}/setujui', [ReportController::class, 'approveAndForward'])->name('reports.approve');
     Route::post('/laporan/{id}/tolak', [ReportController::class, 'reject'])->name('reports.reject');
 
-    // Ketua Jurusan (Kajur) Actions
-    Route::post('/laporan/{id}/tindak-lanjut', [ReportController::class, 'tindakLanjut'])->name('reports.tindakLanjut');
 });

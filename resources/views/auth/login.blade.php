@@ -3,7 +3,17 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script>
+        (function () {
+            const mobileAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+            const touchPhone = (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)
+                && Math.min(window.screen.width, window.screen.height) <= 600;
+            if (mobileAgent || touchPhone) document.documentElement.classList.add('sipma-login-mobile');
+        })();
+    </script>
     <title>Login | SIPMA - Sistem Pendataan Pelanggaran Mahasiswa</title>
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}?v=20261027-3">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v=20261027-3">
 
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,20 +60,6 @@
                 radial-gradient(circle at 90% 85%, rgba(13, 148, 136, 0.08) 0%, transparent 45%);
         }
 
-        /* Top Navbar - Responsive */
-        .top-navbar {
-            background: #ffffff;
-            padding: 8px 20px;
-            border-bottom: 1px solid #e2e8f0;
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
-            position: relative;
-            z-index: 10;
-        }
-        @media (min-width: 768px) {
-            .top-navbar {
-                padding: 8px 28px;
-            }
-        }
         .brand-logo-container {
             display: flex;
             align-items: center;
@@ -71,9 +67,9 @@
         }
         .brand-logo-icon {
             display: block;
-            width: clamp(130px, 18vw, 170px);
-            height: auto;
-            aspect-ratio: 1737 / 688;
+            width: clamp(150px, 18vw, 220px);
+            height: clamp(84px, 10vw, 120px);
+            aspect-ratio: 2752 / 1536;
             object-fit: contain;
             background: transparent;
             border-radius: 0;
@@ -81,11 +77,6 @@
             box-shadow: none;
             flex-shrink: 0;
             transition: transform 0.2s ease;
-        }
-        @media (min-width: 768px) {
-            .brand-logo-icon {
-                height: auto;
-            }
         }
         .brand-logo-container:hover .brand-logo-icon {
             transform: scale(1.05);
@@ -131,17 +122,17 @@
         .main-wrapper {
             flex: 1;
             display: flex;
-            align-items: flex-start;
-            padding: 20px 16px;
+            align-items: center;
+            padding: 20px 16px 24px;
         }
         @media (min-width: 768px) {
             .main-wrapper {
-                padding: 24px 24px;
+                padding: 22px 24px 28px;
             }
         }
         @media (min-width: 1200px) {
             .main-wrapper {
-                padding: 30px 30px;
+                padding: 24px 30px 32px;
             }
         }
         .main-section {
@@ -151,6 +142,100 @@
         }
 
         /* Left Side: About SIPMA & Feature Cards */
+        .login-workflow-banner {
+            padding: 22px;
+            border-radius: 18px;
+            background: linear-gradient(110deg, #134e4a 0%, #0d9488 62%, #0f9b8e 100%);
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(15, 118, 110, 0.2);
+        }
+        .login-workflow-header {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding-bottom: 14px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .login-workflow-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 44px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            font-size: 1.05rem;
+        }
+        .login-workflow-title {
+            margin: 0 0 3px;
+            color: #fff;
+            font-size: clamp(1rem, 1.7vw, 1.4rem);
+            font-weight: 800;
+            line-height: 1.3;
+        }
+        .login-workflow-subtitle {
+            margin: 0;
+            color: rgba(255,255,255,0.68);
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+        .login-workflow-steps {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .login-workflow-step {
+            min-height: 138px;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.09);
+        }
+        .login-workflow-step-heading {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 8px;
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 800;
+            line-height: 1.3;
+        }
+        .login-workflow-step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 28px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #fff;
+            color: #0f766e;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+        .login-workflow-step p {
+            margin: 0;
+            color: rgba(255,255,255,0.68);
+            font-size: 0.73rem;
+            line-height: 1.5;
+        }
+        @media (max-width: 1199.98px) {
+            .login-workflow-banner { padding: 18px; }
+            .login-workflow-steps { gap: 8px; }
+            .login-workflow-step { padding: 12px 10px; }
+            .login-workflow-step-heading { gap: 6px; font-size: 0.73rem; }
+            .login-workflow-step p { font-size: 0.68rem; }
+        }
+        @media (max-width: 575.98px) {
+            .login-workflow-banner { padding: 16px; }
+            .login-workflow-steps { grid-template-columns: 1fr; gap: 9px; }
+            .login-workflow-step { min-height: 0; padding: 12px; }
+            .login-workflow-step-heading { font-size: 0.82rem; }
+            .login-workflow-step p { font-size: 0.76rem; }
+        }
         .hero-pill {
             display: inline-flex;
             align-items: center;
@@ -284,42 +369,22 @@
         }
 
         .login-card-header {
-            padding: 24px 20px 14px 20px;
+            padding: 18px 20px 10px 20px;
             text-align: center;
         }
         @media (min-width: 768px) {
             .login-card-header {
-                padding: 30px 28px 16px 28px;
+                padding: 22px 28px 10px 28px;
             }
         }
-        .login-icon-avatar {
-            width: 52px;
-            height: 52px;
-            border-radius: 16px;
-            background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%);
-            color: #0d9488;
-            display: inline-flex;
-            align-items: center;
+        .login-brand {
+            display: flex;
             justify-content: center;
-            font-size: 1.35rem;
-            margin-bottom: 12px;
-            box-shadow: 0 8px 18px rgba(2, 132, 199, 0.16);
+            margin: 18px 20px 0;
         }
-        @media (min-width: 768px) {
-            .login-icon-avatar {
-                width: 58px;
-                height: 58px;
-                font-size: 1.5rem;
-                border-radius: 18px;
-                margin-bottom: 14px;
-            }
-        }
-        .login-card-title {
-            font-size: clamp(1.35rem, 2.5vw, 1.65rem);
-            font-weight: 800;
-            color: var(--text-heading);
-            margin-bottom: 4px;
-            letter-spacing: -0.3px;
+        .login-brand .brand-logo-icon {
+            width: clamp(145px, 17vw, 205px);
+            height: clamp(82px, 9vw, 112px);
         }
         .login-card-subtitle {
             font-size: 0.82rem;
@@ -541,123 +606,34 @@
             color: #ccfbf1;
         }
 
-        /* =========================================================
-           CAPTCHA WIDGET (reCAPTCHA Style)
-           ========================================================= */
-        .recaptcha-box {
-            background-color: #f9f9f9;
-            border: 1px solid #d3d3d3;
-            border-radius: 4px;
-            width: 100%;
-            max-width: 320px;
-            height: 74px;
-            padding: 10px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            user-select: none;
+        /* Remove desktop vertical centering on phone login. */
+        html.sipma-login-mobile .main-wrapper {
+            align-items: flex-start;
+            padding-top: 8px;
+            padding-bottom: 12px;
         }
-        .recaptcha-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
+        html.sipma-login-mobile body {
+            min-height: 100vh;
+            height: auto;
         }
-        .recaptcha-checkbox {
-            width: 26px;
-            height: 26px;
-            border: 2px solid #c1c1c1;
-            border-radius: 3px;
-            background-color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        @media (max-width: 767.98px) {
+            .main-wrapper {
+                align-items: flex-start;
+                padding-top: 8px;
+                padding-bottom: 12px;
+            }
         }
-        .recaptcha-checkbox:hover {
-            border-color: #b2b2b2;
-        }
-        .recaptcha-checkbox.checked {
-            border-color: #0f9d58;
-            background-color: #0f9d58;
-        }
-        .recaptcha-checkbox.checked i {
-            color: #ffffff;
-            font-size: 14px;
-            display: block;
-        }
-        .recaptcha-label {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #222;
-            margin: 0;
-            cursor: pointer;
-        }
-        .recaptcha-right {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin-left: 10px;
-        }
-        .recaptcha-logo-icon {
-            width: 32px;
-            height: 32px;
-        }
-        .recaptcha-brand-text {
-            font-size: 10px;
-            color: #555;
-            font-family: Roboto, helvetica, arial, sans-serif;
-            font-weight: 500;
-            letter-spacing: 0.2px;
-            margin-top: 1px;
-        }
-        .recaptcha-links {
-            font-size: 8px;
-            color: #555;
-            display: flex;
-            gap: 4px;
-        }
-        .recaptcha-links a {
-            color: #555;
-            text-decoration: none;
-        }
-        .recaptcha-hint-text {
-            font-size: 0.82rem;
-            color: #a30000;
-            font-style: italic;
-            margin-top: 6px;
-            font-weight: 600;
-            display: block;
-        }
+
     </style>
 </head>
 <body>
-
-    <!-- TOP NAVBAR -->
-    <header class="top-navbar">
-        <div class="d-flex align-items-center justify-content-between mx-auto" style="max-width: 1240px;">
-            <a href="{{ url('/') }}" class="brand-logo-container">
-                <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261024-4" class="brand-logo-icon" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa">
-            </a>
-            <div class="d-none d-sm-flex align-items-center">
-                <span class="nav-status-badge">
-                    <span class="pulse-dot"></span>
-                    Portal Aktif &amp; Terverifikasi
-                </span>
-            </div>
-        </div>
-    </header>
-
     <!-- MAIN CONTENT ROW: ABOUT & CARDS + MODERN LOGIN FORM -->
     <div class="main-wrapper">
         <main class="main-section">
-            <div class="row align-items-center">
+            <div class="row align-items-start">
                 
-                <!-- SISI KIRI (DESKTOP) / SISI BAWAH (MOBILE): INFORMASI, KELEBIHAN & FITUR UTAMA -->
-                <div class="col-lg-7 pr-lg-5 order-2 order-lg-1 mt-4 mt-lg-0">
+                <!-- Alur laporan mengikuti banner dashboard Kemahasiswaan -->
+                <div class="col-lg-7 pr-lg-4 order-2 order-lg-1 mt-4 mt-lg-0">
                     <div class="hero-pill">
                         <i class="fas fa-check-circle"></i>
                         Sistem Kedisiplinan Digital
@@ -666,69 +642,41 @@
                         Platform Terpadu Pengelolaan <span class="text-highlight">Tata Tertib Mahasiswa</span>
                     </h1>
                     <p class="section-desc">
-                        <strong>SIPMA (Sistem Pendataan Pelanggaran Mahasiswa)</strong> adalah platform digital terpadu untuk mencatat, mengelola, dan memonitor penegakan kedisiplinan serta tata tertib di lingkungan kampus secara cepat, transparan, dan akurat.
+                        <strong>SIPMA (Sistem Pendataan Pelanggaran Mahasiswa)</strong> membantu mahasiswa menyampaikan laporan dan membantu Kemahasiswaan memverifikasi data serta bukti sebelum laporan diteruskan ke jurusan.
                     </p>
-
-                    <!-- 4 Kartu Kelebihan & Fitur Utama (Responsive) -->
-                    <div class="features-grid">
-                        
-                        <!-- Kelebihan / Fitur 1 -->
-                        <div class="feature-box">
-                            <div class="feature-icon-badge badge-cyan">
-                                <i class="fas fa-laptop-file"></i>
+                    <section class="login-workflow-banner" aria-label="Alur Penanganan Pelanggaran Mahasiswa">
+                        <header class="login-workflow-header">
+                            <span class="login-workflow-icon"><i class="fas fa-route"></i></span>
+                            <div>
+                                <h1 class="login-workflow-title">Alur Penanganan Pelanggaran Mahasiswa</h1>
+                                <p class="login-workflow-subtitle">Tahapan resmi verifikasi dan penyelesaian laporan tata tertib mahasiswa di kampus</p>
                             </div>
-                            <div class="feature-box-content">
-                                <h6 class="feature-title">Pelaporan Cepat &amp; Praktis</h6>
-                                <p class="feature-desc">Penginputan laporan pelanggaran secara daring yang mudah, dilengkapi fitur unggah bukti dokumen, foto, atau video.</p>
-                            </div>
+                        </header>
+                        <div class="login-workflow-steps">
+                            <article class="login-workflow-step">
+                                <div class="login-workflow-step-heading"><span class="login-workflow-step-number">1</span><span>Laporan Masuk</span></div>
+                                <p>Mahasiswa atau Kemahasiswaan memasukkan data pelanggaran dan bukti pendukung.</p>
+                            </article>
+                            <article class="login-workflow-step">
+                                <div class="login-workflow-step-heading"><span class="login-workflow-step-number">2</span><span>Verifikasi Data</span></div>
+                                <p>Bagian Kemahasiswaan memvalidasi identitas terlapor dan bukti yang diunggah.</p>
+                            </article>
+                            <article class="login-workflow-step">
+                                <div class="login-workflow-step-heading"><span class="login-workflow-step-number">3</span><span>Laporan ke Kajur</span></div>
+                                <p>Laporan terverifikasi diteruskan ke akun Ketua Jurusan sebagai informasi.</p>
+                            </article>
                         </div>
-
-                        <!-- Kelebihan / Fitur 2 -->
-                        <div class="feature-box">
-                            <div class="feature-icon-badge badge-coral">
-                                <i class="fas fa-clock-rotate-left"></i>
-                            </div>
-                            <div class="feature-box-content">
-                                <h6 class="feature-title">Transparansi Real-Time</h6>
-                                <p class="feature-desc">Pantau perkembangan status penanganan laporan secara terbuka, akurat, dan dapat dicek langsung kapan saja.</p>
-                            </div>
-                        </div>
-
-                        <!-- Kelebihan / Fitur 3 -->
-                        <div class="feature-box">
-                            <div class="feature-icon-badge badge-gold">
-                                <i class="fas fa-shield-halved"></i>
-                            </div>
-                            <div class="feature-box-content">
-                                <h6 class="feature-title">Keamanan &amp; Data Terpusat</h6>
-                                <p class="feature-desc">Seluruh rekam data kedisiplinan tersimpan rapi dan terenkripsi dalam database kampus yang aman dan terpadu.</p>
-                            </div>
-                        </div>
-
-                        <!-- Kelebihan / Fitur 4 -->
-                        <div class="feature-box">
-                            <div class="feature-icon-badge badge-emerald">
-                                <i class="fas fa-chart-pie"></i>
-                            </div>
-                            <div class="feature-box-content">
-                                <h6 class="feature-title">Statistik &amp; Rekapitulasi</h6>
-                                <p class="feature-desc">Visualisasi grafik tren pelanggaran serta kemudahan ekspor dokumen rekap data untuk evaluasi berkala kampus.</p>
-                            </div>
-                        </div>
-
-                    </div>
+                    </section>
                 </div>
 
                 <!-- SISI KANAN (DESKTOP) / SISI ATAS (MOBILE): FORM LOGIN BERSIH & MODERN -->
                 <div class="col-lg-5 order-1 order-lg-2">
                     <div class="login-card-container">
                         <div class="login-card-top-bar"></div>
-                        
+                        <a href="{{ url('/') }}" class="brand-logo-container login-brand" aria-label="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa">
+                            <img src="{{ asset('img/sipma-logo-login.png') }}?v=20261027-2" class="brand-logo-icon" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa">
+                        </a>
                         <div class="login-card-header">
-                            <div class="login-icon-avatar">
-                                <i class="fas fa-lock"></i>
-                            </div>
-                            <h2 class="login-card-title">Masuk ke SIPMA</h2>
                             <p class="login-card-subtitle">Silakan masukkan akun Anda untuk melanjutkan</p>
                         </div>
 
@@ -763,7 +711,7 @@
                                 <!-- Input Identitas (NIM / Email / Username) -->
                                 <div class="form-field-group">
                                     <label class="field-label" for="loginInput">
-                                        NIM / Email / Username
+                                        NIM/NIP
                                     </label>
                                     <div class="input-group-modern">
                                         <div class="input-icon">
@@ -776,12 +724,9 @@
                                                required
                                                autofocus
                                                class="input-field-modern"
-                                               placeholder="Masukkan NIM atau email">
+                                               placeholder="Masukkan NIM/NIP">
                                     </div>
-                                    <p style="font-size:0.74rem; color:#94a3b8; margin-top:5px; margin-bottom:0;">
-                                        <i class="fas fa-circle-info" style="color:#0d9488;"></i>
-                                        Mahasiswa: gunakan NIM portal kampus. Staf: gunakan email/username.
-                                    </p>
+                                 
                                 </div>
 
                                 <!-- Input Kata Sandi -->
@@ -805,40 +750,9 @@
                                     </div>
                                 </div>
 
-                                <!-- RECAPTCHA WIDGET ("Saya bukan robot") -->
-                                <div style="margin-bottom: 18px;">
-                                    <div class="recaptcha-box" id="recaptchaBox" style="{{ $errors->has('captcha') ? 'border-color: #dc2626;' : '' }}">
-                                        <div class="recaptcha-left" onclick="toggleCaptcha()">
-                                            <div class="recaptcha-checkbox" id="recaptchaCheck">
-                                                <i class="fas fa-check" id="recaptchaCheckIcon" style="display: none; color: #fff; font-size: 14px;"></i>
-                                            </div>
-                                            <label class="recaptcha-label">Saya bukan robot</label>
-                                            <input type="hidden" name="captcha_verified" id="captchaVerified" value="0">
-                                        </div>
-                                        <div class="recaptcha-right">
-                                            <svg class="recaptcha-logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M42 24C42 14.0589 33.9411 6 24 6C17.0601 6 11.0855 9.94052 8.16335 15.6885L13.5684 18.391C15.6178 14.3638 19.4975 11.6 24 11.6C30.8485 11.6 36.4 17.1515 36.4 24C36.4 30.8485 30.8485 36.4 24 36.4C19.4975 36.4 15.6178 33.6362 13.5684 29.609L8.16335 32.3115C11.0855 38.0595 17.0601 42 24 42C33.9411 42 42 33.9411 42 24Z" fill="#1A73E8"/>
-                                                <path d="M6 24C6 26.6853 6.58784 29.2335 7.64385 31.5245L13.0489 28.822C12.3789 27.3512 12 25.7206 12 24C12 22.2794 12.3789 20.6488 13.0489 19.178L7.64385 16.4755C6.58784 18.7665 6 21.3147 6 24Z" fill="#9AA0A6"/>
-                                            </svg>
-                                            <div class="recaptcha-brand-text">reCAPTCHA</div>
-                                            <div class="recaptcha-links">
-                                                <span>Privasi</span> - <span>Persyaratan</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="recaptcha-hint-text">
-                                        * Centang captcha di atas untuk melengkapi validasi
-                                    </div>
-                                    @error('captcha')
-                                        <div class="text-danger small font-weight-bold mt-1">
-                                            <i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}
-                                        </div>
-                                    @enderror
-                                </div>
-
                                 <!-- Checkbox Ingat Saya -->
                                 <div class="remember-checkbox-wrapper" style="margin-top:18px;">
-                                    <input type="checkbox" name="remember" id="rememberMe">
+                                    <input type="checkbox" name="remember" id="rememberMe" value="1" {{ old('remember') ? 'checked' : '' }}>
                                     <label for="rememberMe">Ingat saya di perangkat ini</label>
                                 </div>
 
@@ -849,10 +763,7 @@
                                 </button>
                             </form>
 
-                            <!-- Badge Keamanan Resmi -->
-                            <div class="login-secure-footer">
-                                <i class="fas fa-shield-halved"></i>
-                                <span>Akses Terverifikasi &amp; Terlindungi · Bridge API Portal Kampus</span>
+                           
                             </div>
 
                         </div>
@@ -873,25 +784,6 @@
 
     <!-- Scripts -->
     <script>
-        // Toggle reCAPTCHA check
-        function toggleCaptcha() {
-            const check = document.getElementById('recaptchaCheck');
-            const icon = document.getElementById('recaptchaCheckIcon');
-            const input = document.getElementById('captchaVerified');
-            const box = document.getElementById('recaptchaBox');
-
-            if (input.value === '1') {
-                input.value = '0';
-                check.classList.remove('checked');
-                icon.style.display = 'none';
-            } else {
-                input.value = '1';
-                check.classList.add('checked');
-                icon.style.display = 'block';
-                box.style.borderColor = '#0f9d58';
-            }
-        }
-
         // Show/Hide Password toggle
         document.getElementById('btnTogglePassword').addEventListener('click', function () {
             const pwd  = document.getElementById('passwordInput');

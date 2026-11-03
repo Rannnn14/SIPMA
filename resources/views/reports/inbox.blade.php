@@ -86,7 +86,7 @@
                     <h5 class="m-0 font-weight-bold text-white" style="font-size: 1.25rem; letter-spacing: -0.2px;">
                         Inbox Verifikasi Laporan Pelanggaran
                     </h5>
-                    <small class="text-white-50">Tinjau dan validasi berkas laporan mahasiswa yang baru masuk sebelum diteruskan ke jurusan terkait.</small>
+                    <small class="text-white-50">Tinjau dan validasi berkas laporan mahasiswa yang baru masuk. Periode: {{ $selectedAcademicYear === 'all' ? 'Semua TA' : 'T.A. ' . $selectedAcademicYear }}</small>
                 </div>
             </div>
         </div>
@@ -151,15 +151,15 @@
                     <i class="fas fa-inbox"></i>
                 </div>
                 <h6 class="m-0 font-weight-bold text-dark" style="font-size: 0.95rem;">
-                    Inbox Laporan Menunggu Verifikasi
+                    Inbox Verifikasi
                 </h6>
             </div>
             <span class="badge badge-warning px-3 py-1.5 text-dark font-weight-bold" style="background:#fef3c7; color:#b45309; border-radius: 20px; font-size: 0.8rem;">
-                <i class="fas fa-clock mr-1"></i> {{ $reports->total() }} Menunggu
+                <i class="fas fa-clock mr-1"></i> {{ $reports->count() }} Antrean
             </span>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive report-list-scroll">
             <table class="table inbox-table mb-0">
                 <thead>
                     <tr>
@@ -168,7 +168,7 @@
                         <th>Mahasiswa Terlapor</th>
                         <th>Jurusan / Prodi</th>
                         <th style="width: 110px;" class="text-center">Kategori</th>
-                        <th style="width: 170px;" class="text-center">Status</th>
+                        <th style="width: 190px;" class="text-center">Status</th>
                         <th style="width: 130px;" class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -218,10 +218,11 @@
                             </span>
                         </td>
 
-                        <!-- Status -->
+                        <!-- Status laporan pada antrean inbox -->
                         <td class="text-center">
-                            <span class="badge px-2.5 py-1.5 font-weight-bold" style="background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; border-radius: 8px; font-size: 0.78rem;">
-                                <i class="fas fa-hourglass-half mr-1"></i> Menunggu Verifikasi
+                            <span class="report-status-badge {{ $report->status_badge_class }}">
+                                <span class="report-status-icon"><i class="fas fa-clock"></i></span>
+                                {{ $report->status_label }}
                             </span>
                         </td>
 
@@ -239,8 +240,8 @@
                         <td colspan="7" class="text-center text-muted py-5">
                             <div class="py-3">
                                 <i class="fas fa-inbox fa-3x text-muted mb-2" style="opacity: 0.4;"></i>
-                                <div class="font-weight-bold text-dark">Tidak ada laporan yang menunggu verifikasi</div>
-                                <small class="text-muted">Semua laporan yang masuk telah diverifikasi dan diproses.</small>
+                                <div class="font-weight-bold text-dark">Antrean verifikasi kosong</div>
+                                <small class="text-muted">Semua laporan yang masuk sudah memiliki keputusan.</small>
                             </div>
                         </td>
                     </tr>
@@ -249,11 +250,29 @@
             </table>
         </div>
 
-        @if($reports->hasPages())
-        <div class="p-3 border-top bg-light d-flex justify-content-end">
-            {{ $reports->links() }}
-        </div>
-        @endif
     </div>
+    <script>
+        (() => {
+            const key = 'sipma-last-list:' + location.pathname;
+            if (new URLSearchParams(location.search).has('restore_position')) {
+                const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
+                if (saved?.url) history.replaceState(null, '', saved.url);
+                requestAnimationFrame(() => {
+                    const list = document.querySelector('.report-list-scroll');
+                    if (list && saved?.listScrollTop) list.scrollTop = saved.listScrollTop;
+                    else if (saved?.scrollY) window.scrollTo(0, saved.scrollY);
+                });
+                sessionStorage.removeItem(key);
+                return;
+            }
+            document.querySelectorAll('a[href*="/laporan/"]').forEach(link => {
+                if (!link.href.includes('return_to=')) return;
+                link.addEventListener('click', () => {
+                    const list = document.querySelector('.report-list-scroll');
+                    sessionStorage.setItem(key, JSON.stringify({url: location.href, scrollY: window.scrollY, listScrollTop: list?.scrollTop || 0}));
+                });
+            });
+        })();
+    </script>
 </x-layout>
 

@@ -12,6 +12,7 @@
 
         .step-pill {
             display: inline-flex;
+            flex: 0 0 auto;
             align-items: center;
             padding: 4px 12px;
             border-radius: 20px;
@@ -19,6 +20,7 @@
             font-weight: 700;
             letter-spacing: 0.5px;
             text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .modern-input-group {
@@ -264,7 +266,7 @@
                                 <option value="">-- Pilih Fakultas --</option>
                                 @foreach($faculties as $facName => $deptList)
                                     <option value="{{ $facName }}" {{ old('reported_faculty') === $facName ? 'selected' : '' }}>
-                                        {{ $facName }}
+                                        {{ \App\Http\Controllers\ReportController::facultyDisplayName($facName) }}
                                     </option>
                                 @endforeach
                             </select>
@@ -309,8 +311,7 @@
                                    title="Hanya boleh memasukkan angka">
                         </div>
                         <small class="text-muted mt-1 d-block">
-                            <i class="fas fa-info-circle mr-1 text-primary"></i>
-                            Ketik semester perkuliahan mahasiswa terlapor saat ini (hanya angka, contoh: 2, 4, 6).
+                            Ketik semester perkuliahan mahasiswa terlapor saat ini.
                         </small>
                     </div>
                 </div>
@@ -457,7 +458,7 @@
                     <label class="font-weight-bold text-dark small mb-2">Unggah Berkas Bukti Pendukung <span class="text-danger">*</span></label>
                     
                     <div class="dropzone-box" onclick="document.getElementById('evidenceFile').click()">
-                        <input type="file" name="evidence[]" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4" multiple required style="display: none;">
+                        <input type="file" name="evidence[]" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,.m4v,.webm,.3gp,video/*" multiple required style="display: none;">
                         <div class="mb-2">
                             <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto text-primary" style="width: 52px; height: 52px; background: #eff6ff;">
                                 <i class="fas fa-cloud-upload-alt fa-2x"></i>
@@ -467,13 +468,13 @@
                             Klik di sini untuk memilih 1–4 berkas bukti
                         </h6>
                         <p class="text-muted small mb-2" id="fileSubDisplay">
-                            Format: <strong>PDF, JPG, PNG, MP4</strong> · Maksimal <strong>4 file</strong>, masing-masing 10 MB
+                            Format: <strong>PDF, JPG, PNG, MP4, MOV, M4V, WEBM, 3GP</strong> · Dokumen/foto maks. 10 MB, video maks. 50 MB
                         </p>
-                        <div id="selectedEvidenceFiles" class="d-flex flex-column align-items-center mt-3"></div>
+                        <div id="selectedEvidenceFiles" class="d-flex flex-column align-items-center w-100 mt-3"></div>
                         <div class="d-flex justify-content-center flex-wrap">
                             <span class="badge badge-light border text-muted mr-1 mb-1">📄 PDF Dokumen</span>
                             <span class="badge badge-light border text-muted mr-1 mb-1">🖼️ JPG / PNG Foto</span>
-                            <span class="badge badge-light border text-muted mb-1">🎥 MP4 Rekaman Video</span>
+                            <span class="badge badge-light border text-muted mb-1">🎥 Video MP4 / MOV / WEBM / 3GP</span>
                         </div>
                         <div class="mt-3" onclick="event.stopPropagation();">
                             <button type="button" id="addEvidenceFile" class="btn btn-sm btn-outline-primary px-3" style="display: none; border-radius: 8px;" onclick="document.getElementById('evidenceFile').click();">
@@ -622,20 +623,24 @@
                     const files = selectedFiles;
                     selectedFilesDisplay.replaceChildren();
                     fileNameDisplay.textContent = files.length ? files.length + ' berkas dipilih' : 'Klik di sini untuk memilih 1–4 berkas bukti';
+                    fileNameDisplay.style.fontSize = files.length ? '1.35rem' : '';
+                    fileNameDisplay.style.color = files.length ? '#475569' : '';
                     addFileButton.style.display = files.length > 0 && files.length < 4 ? 'inline-block' : 'none';
                     fileSubDisplay.innerHTML = files.length
                         ? 'Total ukuran: <strong>' + (files.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024)).toFixed(2) + ' MB</strong>'
-                        : 'Format: <strong>PDF, JPG, PNG, MP4</strong> · Maksimal <strong>4 file</strong>, masing-masing 10 MB';
+                        : 'Format: <strong>PDF, JPG, PNG, MP4, MOV, M4V, WEBM, 3GP</strong> · Dokumen/foto maks. 10 MB, video maks. 50 MB';
                     files.forEach((file, index) => {
                         const row = document.createElement('div');
                         row.className = 'd-flex align-items-center justify-content-between bg-white border rounded px-2 py-1 mb-1';
-                        row.style.cssText = 'width: min(100%, 420px); gap: 12px;';
+                        row.style.cssText = 'width: min(100%, 566px); min-height: 44px; gap: 12px; padding: 5px 10px !important;';
                         const name = document.createElement('span');
-                        name.className = 'small text-dark text-truncate';
+                        name.className = 'text-dark text-truncate';
+                        name.style.cssText = 'font-size: 1.05rem; text-align: left;';
                         name.textContent = file.name;
                         const remove = document.createElement('button');
                         remove.type = 'button';
                         remove.className = 'btn btn-sm btn-outline-danger py-0 px-2';
+                        remove.style.cssText = 'font-size: 1.15rem; line-height: 1.5; border-radius: 6px;';
                         remove.setAttribute('aria-label', 'Hapus ' + file.name);
                         remove.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
                         remove.addEventListener('click', (event) => {
@@ -649,6 +654,22 @@
                 };
                 fileInput.addEventListener('change', () => {
                     const newlySelected = Array.from(fileInput.files);
+                    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'mp4', 'mov', 'm4v', 'webm', '3gp'];
+                    const invalidFile = newlySelected.find(file => {
+                        const extension = file.name.split('.').pop().toLowerCase();
+                        const isVideo = ['mp4', 'mov', 'm4v', 'webm', '3gp'].includes(extension);
+                        return !allowedExtensions.includes(extension)
+                            || file.size > (isVideo ? 50 : 10) * 1024 * 1024;
+                    });
+                    if (invalidFile) {
+                        const extension = invalidFile.name.split('.').pop().toLowerCase();
+                        const isVideo = ['mp4', 'mov', 'm4v', 'webm', '3gp'].includes(extension);
+                        alert(isVideo
+                            ? 'Format video harus MP4, MOV, M4V, WEBM, atau 3GP dan ukuran maksimal 50 MB.'
+                            : 'Dokumen atau foto harus PDF, JPG, atau PNG dan ukuran maksimal 10 MB.');
+                        renderSelectedFiles();
+                        return;
+                    }
                     if (selectedFiles.length + newlySelected.length > 4) {
                         alert('Maksimal 4 berkas bukti yang dapat dipilih.');
                         renderSelectedFiles();

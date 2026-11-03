@@ -3,11 +3,13 @@
 
     <style>
         .accounts-table-scroll {
-            max-height: 620px;
+            max-height: min(68vh, 720px);
             overflow: auto;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
             scrollbar-gutter: stable;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
         }
         .accounts-table-scroll thead th {
             position: sticky;
@@ -25,7 +27,7 @@
         .password-reset-card .form-control { min-height: 44px; border-color: #cbd5e1; }
         .password-reset-card .input-group-append .btn { border-color: #cbd5e1; background: #fff; }
         @media (max-width: 767.98px) {
-            .accounts-table-scroll { max-height: 620px; }
+            .accounts-table-scroll { max-height: min(68vh, 720px); }
             .account-search-row .form-group { margin-bottom: .75rem; }
         }
     </style>
@@ -83,8 +85,7 @@
             </form>
 
             <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted mb-2" style="gap:8px;">
-                <span>Menampilkan {{ $accounts->firstItem() ?? 0 }}–{{ $accounts->lastItem() ?? 0 }} dari {{ $accounts->total() }} akun</span>
-                <span><i class="fas fa-arrows-alt-v mr-1"></i>Gulir daftar untuk melihat hingga 20 akun per halaman</span>
+                <span>{{ $accounts->count() }} akun ditemukan</span>
             </div>
             <div class="accounts-table-scroll">
                 <table class="table table-hover align-middle">
@@ -97,9 +98,9 @@
                                 <td>
                                     @if ($account->department)
                                         <div class="font-weight-bold">{{ $account->department }}</div>
-                                        <small class="text-muted">{{ $account->faculty }}</small>
+                                        <small class="text-muted">{{ \App\Http\Controllers\ReportController::facultyDisplayName($account->faculty) }}</small>
                                     @else
-                                        {{ $account->faculty ?: 'Universitas' }}
+                                        {{ $account->faculty ? \App\Http\Controllers\ReportController::facultyDisplayName($account->faculty) : 'Universitas' }}
                                     @endif
                                 </td>
                                 <td><code>{{ $account->username }}</code></td>
@@ -119,40 +120,6 @@
                     </tbody>
                 </table>
             </div>
-            @if ($accounts->hasPages())
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top" style="gap:12px;">
-                    <small class="text-muted">
-                        Menampilkan {{ $accounts->firstItem() ?? 0 }}–{{ $accounts->lastItem() ?? 0 }} dari {{ $accounts->total() }} akun
-                    </small>
-                    <nav aria-label="Navigasi halaman daftar akun">
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item {{ $accounts->onFirstPage() ? 'disabled' : '' }}">
-                                @if ($accounts->onFirstPage())
-                                    <span class="page-link"><i class="fas fa-chevron-left mr-1"></i>Sebelumnya</span>
-                                @else
-                                    <a class="page-link" href="{{ $accounts->previousPageUrl() }}" rel="prev"><i class="fas fa-chevron-left mr-1"></i>Sebelumnya</a>
-                                @endif
-                            </li>
-                            @foreach ($accounts->getUrlRange(max(1, $accounts->currentPage() - 2), min($accounts->lastPage(), $accounts->currentPage() + 2)) as $page => $url)
-                                <li class="page-item {{ $page === $accounts->currentPage() ? 'active' : '' }}">
-                                    @if ($page === $accounts->currentPage())
-                                        <span class="page-link" aria-current="page">{{ $page }}</span>
-                                    @else
-                                        <a class="page-link" href="{{ $url }}">{{ $page }}</a>
-                                    @endif
-                                </li>
-                            @endforeach
-                            <li class="page-item {{ $accounts->hasMorePages() ? '' : 'disabled' }}">
-                                @if ($accounts->hasMorePages())
-                                    <a class="page-link" href="{{ $accounts->nextPageUrl() }}" rel="next">Berikutnya<i class="fas fa-chevron-right ml-1"></i></a>
-                                @else
-                                    <span class="page-link">Berikutnya<i class="fas fa-chevron-right ml-1"></i></span>
-                                @endif
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
-            @endif
         </div>
     </div>
 
@@ -207,9 +174,9 @@
                         <h6 class="font-weight-bold text-gray-800 mb-1">Penempatan</h6>
                         <p class="small text-muted mb-3">Fakultas dan jurusan baru akan langsung tersedia di formulir laporan dan rekap.</p>
                         <div class="form-row">
-                            <div class="form-group col-md-6 account-faculty d-none" data-scope="create"><label>Fakultas <span class="text-danger">*</span></label><select name="faculty" class="form-control account-faculty-select" data-scope="create"><option value="">Pilih fakultas</option>@foreach ($faculties as $faculty)<option value="{{ $faculty->name }}" @selected(old('faculty') === $faculty->name)>{{ $faculty->name }}</option>@endforeach<option value="__new__" data-for-role="wadek3" @selected(old('faculty') === '__new__')>+ Tambah fakultas baru</option></select></div>
+                            <div class="form-group col-md-6 account-faculty d-none" data-scope="create"><label>Fakultas <span class="text-danger">*</span></label><select name="faculty" class="form-control account-faculty-select" data-scope="create"><option value="">Pilih fakultas</option>@foreach ($faculties as $faculty)<option value="{{ $faculty->name }}" @selected(old('faculty') === $faculty->name)>{{ \App\Http\Controllers\ReportController::facultyDisplayName($faculty->name) }}</option>@endforeach<option value="__new__" data-for-role="wadek3" @selected(old('faculty') === '__new__')>+ Tambah fakultas baru</option></select></div>
                             <div class="form-group col-md-6 account-new-faculty d-none" data-scope="create"><label>Nama fakultas baru</label><input name="new_faculty" value="{{ old('new_faculty') }}" class="form-control" maxlength="150" placeholder="Masukkan nama fakultas"></div>
-                            <div class="form-group col-md-6 account-department d-none" data-scope="create"><label>Jurusan / Program Studi <span class="text-danger">*</span></label><select name="department" class="form-control account-department-select" data-scope="create"><option value="">Pilih jurusan</option>@foreach ($departments as $department)<option value="{{ $department->name }}" data-faculty="{{ $department->faculty->name }}" @selected(old('department') === $department->name)>{{ $department->name }} — {{ $department->faculty->name }}</option>@endforeach<option value="__new__" @selected(old('department') === '__new__')>+ Tambah jurusan baru</option></select></div>
+                            <div class="form-group col-md-6 account-department d-none" data-scope="create"><label>Jurusan / Program Studi <span class="text-danger">*</span></label><select name="department" class="form-control account-department-select" data-scope="create"><option value="">Pilih jurusan</option>@foreach ($departments as $department)<option value="{{ $department->name }}" data-faculty="{{ $department->faculty->name }}" @selected(old('department') === $department->name)>{{ $department->name }} — {{ \App\Http\Controllers\ReportController::facultyDisplayName($department->faculty->name) }}</option>@endforeach<option value="__new__" @selected(old('department') === '__new__')>+ Tambah jurusan baru</option></select></div>
                             <div class="form-group col-md-6 account-new-department d-none" data-scope="create"><label>Nama jurusan baru</label><input name="new_department" value="{{ old('new_department') }}" class="form-control" maxlength="150" placeholder="Masukkan nama jurusan"></div>
                         </div>
                     </div>
@@ -236,7 +203,7 @@
                 <div class="modal-body account-form-body p-4">
                     <div class="mb-3">
                         <h6 class="font-weight-bold text-gray-800 mb-1">Identitas akun</h6>
-                        <p class="small text-muted mb-3">Nama dapat dikosongkan sementara dan diisi kemudian.</p>
+                        <p class="small text-muted mb-3"> </p>
                         <div class="form-row">
                             <div class="form-group col-md-6"><label>Nama pemilik</label><input name="name" id="editName" class="form-control" maxlength="100" placeholder="Nama pemilik akun"></div>
                             <div class="form-group col-md-6"><label>Jabatan <span class="text-danger">*</span></label><select name="role" id="editRole" class="form-control account-role" data-scope="edit" required><option value="kajur">Ketua Jurusan</option><option value="wadek3">Wakil Dekan III</option><option value="warek">Wakil Rektor III</option></select></div>
@@ -248,9 +215,9 @@
                         <h6 class="font-weight-bold text-gray-800 mb-1">Penempatan</h6>
                         <p class="small text-muted mb-3">Pilih fakultas dan jurusan yang sesuai dengan jabatan akun.</p>
                         <div class="form-row">
-                            <div class="form-group col-md-6 account-faculty d-none" data-scope="edit"><label>Fakultas <span class="text-danger">*</span></label><select name="faculty" id="editFaculty" class="form-control account-faculty-select" data-scope="edit"><option value="">Pilih fakultas</option>@foreach ($faculties as $faculty)<option value="{{ $faculty->name }}">{{ $faculty->name }}</option>@endforeach<option value="__new__" data-for-role="wadek3">+ Tambah fakultas baru</option></select></div>
+                            <div class="form-group col-md-6 account-faculty d-none" data-scope="edit"><label>Fakultas <span class="text-danger">*</span></label><select name="faculty" id="editFaculty" class="form-control account-faculty-select" data-scope="edit"><option value="">Pilih fakultas</option>@foreach ($faculties as $faculty)<option value="{{ $faculty->name }}">{{ \App\Http\Controllers\ReportController::facultyDisplayName($faculty->name) }}</option>@endforeach<option value="__new__" data-for-role="wadek3">+ Tambah fakultas baru</option></select></div>
                             <div class="form-group col-md-6 account-new-faculty d-none" data-scope="edit"><label>Nama fakultas baru</label><input name="new_faculty" id="editNewFaculty" class="form-control" maxlength="150" placeholder="Masukkan nama fakultas"></div>
-                            <div class="form-group col-md-6 account-department d-none" data-scope="edit"><label>Jurusan / Program Studi <span class="text-danger">*</span></label><select name="department" id="editDepartment" class="form-control account-department-select" data-scope="edit"><option value="">Pilih jurusan</option>@foreach ($departments as $department)<option value="{{ $department->name }}" data-faculty="{{ $department->faculty->name }}">{{ $department->name }} — {{ $department->faculty->name }}</option>@endforeach<option value="__new__">+ Tambah jurusan baru</option></select></div>
+                            <div class="form-group col-md-6 account-department d-none" data-scope="edit"><label>Jurusan / Program Studi <span class="text-danger">*</span></label><select name="department" id="editDepartment" class="form-control account-department-select" data-scope="edit"><option value="">Pilih jurusan</option>@foreach ($departments as $department)<option value="{{ $department->name }}" data-faculty="{{ $department->faculty->name }}">{{ $department->name }} — {{ \App\Http\Controllers\ReportController::facultyDisplayName($department->faculty->name) }}</option>@endforeach<option value="__new__">+ Tambah jurusan baru</option></select></div>
                             <div class="form-group col-md-6 account-new-department d-none" data-scope="edit"><label>Nama jurusan baru</label><input name="new_department" id="editNewDepartment" class="form-control" maxlength="150" placeholder="Masukkan nama jurusan"></div>
                         </div>
                     </div>
@@ -260,10 +227,8 @@
                                 <span class="password-reset-icon"><i class="fas fa-key"></i></span>
                                 <div>
                                     <h6 class="font-weight-bold text-gray-800 mb-1" id="editPasswordHeading">Ganti Password</h6>
-                                    <small class="text-muted">Buat password baru untuk akun ini.</small>
                                 </div>
                             </div>
-                            <div class="alert alert-info py-2 px-3 small mb-3"><i class="fas fa-info-circle mr-1"></i>Biarkan kosong jika tidak ingin mengganti password. Password lama tetap terlindungi.</div>
                             <div class="form-row">
                                 <div class="form-group col-md-6 mb-2">
                                     <label for="editPassword" class="font-weight-bold small">Password baru</label>

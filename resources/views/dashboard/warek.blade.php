@@ -78,7 +78,7 @@
                         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#0d9488;pointer-events:none;z-index:1;"><i class="fas fa-university"></i></span>
                         <select id="warekFacultySelect" aria-label="Pilih fakultas" class="form-control font-weight-bold" style="appearance:none;-webkit-appearance:none;width:100%;height:46px;padding:9px 48px 9px 42px;border-radius:12px;border:1px solid #b9e5df;background-color:#f0fdfa;color:#115e59;box-shadow:0 3px 10px rgba(13,148,136,.08);cursor:pointer;white-space:nowrap;text-overflow:ellipsis;">
                             @foreach($facultyStats as $facultyName => $stats)
-                                <option value="{{ \Illuminate\Support\Str::slug($facultyName) }}">{{ $facultyName }}</option>
+                                <option value="{{ \Illuminate\Support\Str::slug($facultyName) }}">{{ \App\Http\Controllers\ReportController::facultyDisplayName($facultyName) }}</option>
                             @endforeach
                         </select>
                         <span aria-hidden="true" style="position:absolute;right:0;top:1px;bottom:1px;width:42px;border-left:1px solid #cce9e5;border-radius:0 11px 11px 0;background:#e7f8f5;display:flex;align-items:center;justify-content:center;color:#0d9488;pointer-events:none;"><i class="fas fa-chevron-down"></i></span>
@@ -108,7 +108,7 @@
                             <tbody>
                                 @foreach($stats['deptDetails'] as $department => $detail)
                                     @php $count = $detail['total']; $status = $count === 0 ? 'tertib' : ($count < 3 ? 'perhatian' : 'evaluasi'); @endphp
-                                    <tr class="warek-dept-row" data-status="{{ $status }}" data-dept="{{ strtolower($department) }}" data-faculty="{{ $facultyName }}" data-dept-name="{{ $department }}" data-total="{{ $count }}" data-ringan="{{ $detail['ringan'] }}" data-sedang="{{ $detail['sedang'] }}" data-berat="{{ $detail['berat'] }}">
+                                    <tr class="warek-dept-row" data-status="{{ $status }}" data-dept="{{ strtolower($department) }}" data-faculty="{{ \App\Http\Controllers\ReportController::facultyDisplayName($facultyName) }}" data-dept-name="{{ $department }}" data-total="{{ $count }}" data-ringan="{{ $detail['ringan'] }}" data-sedang="{{ $detail['sedang'] }}" data-berat="{{ $detail['berat'] }}">
                                         <td class="text-center font-weight-bold text-muted">{{ $loop->iteration }}</td><td class="font-weight-bold text-dark">{{ $department }}</td>
                                         <td class="text-center"><span class="badge px-3 py-1 font-weight-bold" style="background:{{ $count > 0 ? '#0d9488' : '#f1f5f9' }};color:{{ $count > 0 ? '#fff' : '#64748b' }};border-radius:8px;">{{ $count }} Kasus</span></td>
                                         <td class="text-center"><span class="badge mr-1 px-2 py-1" style="background:#ecfdf5;color:#065f46;border-radius:6px;">{{ $detail['ringan'] }}</span><span class="badge mr-1 px-2 py-1" style="background:#fffbeb;color:#92400e;border-radius:6px;">{{ $detail['sedang'] }}</span><span class="badge px-2 py-1" style="background:#fef2f2;color:#991b1b;border-radius:6px;">{{ $detail['berat'] }}</span></td>
@@ -145,7 +145,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             const facultyData = {};
             @foreach($facultyStats as $facultyName => $stats)
-                facultyData[@json(\Illuminate\Support\Str::slug($facultyName))] = {name:@json($facultyName),labels:@json(array_keys($stats['deptBreakdown'])),values:@json(array_values($stats['deptBreakdown']))};
+                facultyData[@json(\Illuminate\Support\Str::slug($facultyName))] = {name:@json(\App\Http\Controllers\ReportController::facultyDisplayName($facultyName)),labels:@json(array_keys($stats['deptBreakdown'])),values:@json(array_values($stats['deptBreakdown']))};
             @endforeach
             const facultySelect = document.getElementById('warekFacultySelect');
             const recapTitle = document.getElementById('warekRecapTitle');
@@ -177,7 +177,7 @@
             };
             const initialFaculty = facultySelect.options[0]?.value;
             const initialData = facultyData[initialFaculty];
-            deptChart = new Chart(document.getElementById('warekDeptChart'), {type:'bar',data:{labels:initialData?.labels.slice(0,5) || [],datasets:[{label:'Total Kasus',data:initialData?.values.slice(0,5) || [],backgroundColor:'#0d9488',borderRadius:6,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart'},scales:{x:{beginAtZero:true,ticks:{stepSize:1}},y:{ticks:{autoSkip:false,font:{size:11,weight:'600'}}}},plugins:{legend:{display:false}}}});
+            deptChart = new Chart(document.getElementById('warekDeptChart'), {type:'bar',data:{labels:initialData?.labels.slice(0,5) || [],datasets:[{label:'Jumlah',data:initialData?.values.slice(0,5) || [],backgroundColor:'#0d9488',borderRadius:6,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart'},scales:{x:{beginAtZero:true,ticks:{precision:0,maxTicksLimit:6}},y:{ticks:{autoSkip:false,font:{size:11,weight:'600'}}}},plugins:{legend:{display:false}}}});
             facultySelect.addEventListener('change', updateFaculty);
             document.getElementById('warekFilterStatus').addEventListener('change', applyFilters);
             document.getElementById('warekSearchDept').addEventListener('input', applyFilters);
@@ -188,10 +188,10 @@
             const expandChart = () => {
                 const data = facultyData[facultySelect.value]; if (!data) return;
                 document.getElementById('warekExpandedChartTitle').textContent = 'Laporan per Jurusan — ' + data.name;
-                document.getElementById('warekExpandedChartSubtitle').textContent = 'Total laporan pada fakultas yang dipilih';
+                document.getElementById('warekExpandedChartSubtitle').textContent = 'Jumlah laporan terverifikasi per jurusan';
                 if (expandedChart) expandedChart.destroy();
                 document.getElementById('warekExpandedChartCanvasArea').style.height = Math.max(420, data.labels.length * 52) + 'px';
-                expandedChart = new Chart(document.getElementById('warekExpandedDeptChart'), {type:'bar',data:{labels:data.labels,datasets:[{label:'Total Kasus',data:data.values,backgroundColor:'#0d9488',borderRadius:7,barThickness:26}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart'},scales:{x:{beginAtZero:true,ticks:{stepSize:1}},y:{ticks:{autoSkip:false,font:{size:13,weight:'600'}}}},plugins:{legend:{display:false},tooltip:{enabled:true}}}});
+                expandedChart = new Chart(document.getElementById('warekExpandedDeptChart'), {type:'bar',data:{labels:data.labels,datasets:[{label:'Jumlah',data:data.values,backgroundColor:'#0d9488',borderRadius:7,barThickness:26}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart'},scales:{x:{beginAtZero:true,ticks:{precision:0,maxTicksLimit:6}},y:{ticks:{autoSkip:false,font:{size:13,weight:'600'}}}},plugins:{legend:{display:false},tooltip:{enabled:true}}}});
                 chartModal.style.display = 'flex';
             };
             document.getElementById('expandWarekDeptChart').addEventListener('click', expandChart);

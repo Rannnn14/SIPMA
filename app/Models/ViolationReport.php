@@ -54,24 +54,18 @@ class ViolationReport extends Model
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
-            'pending', 'dilaporkan' => 'Menunggu Verifikasi',
             'ditolak' => 'Ditolak',
-            'dikonfirmasi', 'diverifikasi_kaprodi', 'diteruskan_kemahasiswaan' => 'Dikonfirmasi (Ke Kajur)',
-            'diproses', 'sedang_diproses' => 'Dalam Penanganan Kajur',
-            'selesai', 'sanksi_ditetapkan' => 'Selesai Tindak Lanjut',
-            default => ucfirst(str_replace('_', ' ', $this->status ?? 'pending')),
+            'pending', 'dilaporkan' => 'Belum Terverifikasi',
+            default => 'Terverifikasi',
         };
     }
 
     public function getStatusBadgeClassAttribute(): string
     {
         return match ($this->status) {
-            'pending', 'dilaporkan' => 'badge-warning text-dark',
-            'ditolak' => 'badge-danger',
-            'dikonfirmasi', 'diverifikasi_kaprodi', 'diteruskan_kemahasiswaan' => 'badge-info',
-            'diproses', 'sedang_diproses' => 'badge-primary',
-            'selesai', 'sanksi_ditetapkan' => 'badge-success',
-            default => 'badge-secondary',
+            'ditolak' => 'report-status-rejected',
+            'pending', 'dilaporkan' => 'report-status-pending',
+            default => 'report-status-verified',
         };
     }
 

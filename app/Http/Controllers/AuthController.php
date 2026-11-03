@@ -43,12 +43,6 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // Validasi CAPTCHA terlebih dahulu
-        $captchaError = $this->validateCaptcha($request);
-        if ($captchaError) {
-            return back()->withErrors(['captcha' => $captchaError])->onlyInput('login');
-        }
-
         $request->validate([
             'login'    => ['required', 'string'],
             'password' => ['required', 'string'],
@@ -307,22 +301,4 @@ class AuthController extends Controller
         }
     }
 
-    // =========================================================================
-    // CAPTCHA HELPERS ("Saya bukan robot" Checkbox Verification)
-    // =========================================================================
-
-    /**
-     * Validasi captcha "Saya bukan robot" dari request.
-     * Return pesan error string jika tidak dicentang, null jika valid.
-     */
-    protected function validateCaptcha(Request $request): ?string
-    {
-        $checked = $request->input('captcha_verified');
-
-        if (!$checked || $checked != '1') {
-            return 'Centang captcha di atas untuk melengkapi validasi.';
-        }
-
-        return null;
-    }
 }

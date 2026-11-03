@@ -32,14 +32,35 @@
         if (is_string($returnTo) && str_starts_with($returnTo, '/') && !str_starts_with($returnTo, '//')) {
             $backRoute = url($returnTo);
         }
+        $backRoute .= (str_contains($backRoute, '?') ? '&' : '?') . 'restore_position=1';
     @endphp
 
     <!-- Tombol Kembali yang Bagus & Rada Besar -->
     <div class="mb-3">
-        <a href="{{ $backRoute }}" class="btn-kembali-sipma shadow-sm">
+        <a href="{{ $backRoute }}" class="btn-kembali-sipma shadow-sm" id="returnToLastPosition">
             <i class="fas fa-arrow-left mr-2" style="font-size: 1rem;"></i> Kembali
         </a>
     </div>
+
+    <script>
+        // Restore the last list URL and scroll position when returning from report detail.
+        document.getElementById('returnToLastPosition')?.addEventListener('click', function (event) {
+            const requestedTarget = new URL(this.href, window.location.origin);
+            const saved = sessionStorage.getItem('sipma-last-list:' + requestedTarget.pathname);
+            if (saved) {
+                const lastList = JSON.parse(saved);
+                if (lastList?.url) {
+                    event.preventDefault();
+                    const target = new URL(lastList.url, window.location.origin);
+                    target.searchParams.set('restore_position', '1');
+                    window.location.assign(target);
+                }
+            } else if (document.referrer && new URL(document.referrer).origin === window.location.origin) {
+                event.preventDefault();
+                window.history.back();
+            }
+        });
+    </script>
 
     <!-- Header Banner Teal Modern (Langsung REP-..., Tanpa Tulisan 'KASUS') -->
     <div class="card mb-4 overflow-hidden border-0 shadow-sm" style="border-radius: 16px;">
@@ -60,17 +81,10 @@
 
                 <!-- Status Badge di Samping Banner -->
                 <div>
-                    @if(in_array($report->status, ['pending', 'dilaporkan']))
-                        <span class="badge px-3 py-2 font-weight-bold shadow-sm" style="background: #fef3c7; color: #b45309; border-radius: 20px; font-size: 0.88rem;">
-                            <i class="fas fa-hourglass-half mr-1"></i> Menunggu Verifikasi
-                        </span>
-                    @elseif($report->status === 'ditolak')
-                        <span class="badge px-3 py-2 font-weight-bold shadow-sm" style="background: #fee2e2; color: #dc2626; border-radius: 20px; font-size: 0.88rem;">
-                            <i class="fas fa-times-circle mr-1"></i> Ditolak
-                        </span>
-                    @else
-                        <span class="badge px-3 py-2 font-weight-bold shadow-sm" style="background: #ffffff; color: #0f766e; border-radius: 20px; font-size: 0.88rem;">
-                            <i class="fas fa-check-circle mr-1 text-success"></i> Terverifikasi
+                    @if(!in_array($report->status, ['pending', 'dilaporkan']))
+                        <span class="report-status-badge {{ $report->status_badge_class }} shadow-sm">
+                            <span class="report-status-icon"><i class="fas {{ $report->status === 'ditolak' ? 'fa-times' : 'fa-check' }}"></i></span>
+                            {{ $report->status_label }}
                         </span>
                     @endif
                 </div>
@@ -265,8 +279,8 @@
             </div>
             @endif
 
-            <!-- Riwayat Tindak Lanjut Kajur jika ada -->
-            @if($report->kajur_notes)
+            <!-- Catatan tindak lanjut lama hanya untuk admin; Kajur menerima laporan sebagai informasi. -->
+            @if($report->kajur_notes && !auth()->user()->isKajur())
             <div class="card shadow-sm mb-4 border-0" style="border-radius: 16px; border-left: 5px solid #10b981 !important; background: #f0fdf4;">
                 <div class="card-header py-3 px-4 bg-transparent border-bottom">
                     <h6 class="m-0 font-weight-bold text-success"><i class="fas fa-gavel mr-1"></i> Hasil Tindak Lanjut Ketua Jurusan</h6>
@@ -328,7 +342,7 @@
                                         <i class="fas fa-university mr-1.5 text-teal" style="color: #0d9488;"></i> Fakultas
                                     </td>
                                     <td class="font-weight-bold text-dark py-2.5">
-                                        : {{ $report->faculty_name ?: 'FEBI' }}
+                                        : {{ \App\Http\Controllers\ReportController::facultyDisplayName($report->faculty_name ?: 'FEBI') }}
                                     </td>
                                 </tr>
                                 <tr>
@@ -358,11 +372,11 @@
                         </div>
                     @elseif(in_array($report->status, ['pending', 'dilaporkan']))
                         <p class="small text-muted mb-3" style="line-height: 1.5;">
-                            Tinjau laporan ini. Ketika Anda menekan <strong>Setujui</strong>, laporan otomatis terverifikasi dan diteruskan ke Ketua Jurusan <strong>{{ $report->reported_department }}</strong>.
+                            Tinjau laporan ini. Ketika Anda menekan <strong>Setujui &amp; Verifikasi</strong>, laporan otomatis berstatus Terverifikasi.
                         </p>
                     @else
                         <p class="small text-muted mb-3" style="line-height: 1.5;">
-                            Status saat ini: <strong>{{ $report->status_label }}</strong>. Laporan sudah diteruskan ke Ketua Jurusan. Anda masih dapat menolaknya jika diperlukan.
+                            Status saat ini: <strong>Terverifikasi</strong>. Anda masih dapat menolak laporan ini jika diperlukan.
                         </p>
                     @endif
 
@@ -371,8 +385,8 @@
                         <form action="{{ route('reports.approve', $report->id) }}" method="POST" class="flex-fill m-0">
                             @csrf
                             <input type="hidden" name="target_department" value="{{ $report->target_department ?? $report->reported_department }}">
-                            <button type="submit" class="btn btn-block font-weight-bold text-white shadow-sm py-2" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); border-radius: 10px; font-size: 0.92rem;" onclick="return confirm('Setujui laporan ini dan teruskan ke Ketua Jurusan {{ $report->target_department ?? $report->reported_department }}?')">
-                                <i class="fas fa-check-circle mr-1"></i> {{ $report->status === 'ditolak' ? 'Setujui Kembali' : 'Setujui & Teruskan' }}
+                            <button type="submit" class="btn btn-block font-weight-bold text-white shadow-sm py-2" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); border-radius: 10px; font-size: 0.92rem;" onclick="return confirm('Setujui dan verifikasi laporan ini?')">
+                                <i class="fas fa-check-circle mr-1"></i> {{ $report->status === 'ditolak' ? 'Setujui Kembali' : 'Setujui & Verifikasi' }}
                             </button>
                         </form>
                         @endif
@@ -388,11 +402,11 @@
             @if(auth()->user()->isKajur())
             <div class="card shadow-sm mb-4 border-0" style="border-radius: 16px; border: 1px solid #ccfbf1 !important;">
                 <div class="card-header py-3 px-4 border-bottom" style="background: #f0fdfa;">
-                    <h6 class="m-0 font-weight-bold" style="color: #0f766e;"><i class="fas fa-check-circle mr-1"></i> Laporan Diterima oleh Jurusan</h6>
+                    <h6 class="m-0 font-weight-bold" style="color: #0f766e;"><i class="fas fa-check-circle mr-1"></i> Laporan Terverifikasi</h6>
                 </div>
                 <div class="card-body p-4">
                     <p class="small text-muted mb-0">
-                        Laporan ini telah diverifikasi oleh Kemahasiswaan dan diteruskan ke Jurusan <strong>{{ auth()->user()->department }}</strong>. Lakukan tindak lanjut sesuai prosedur internal jurusan.
+                            Laporan ini berstatus <strong>Terverifikasi</strong>. Tidak ada tindak lanjut yang perlu dilakukan melalui SIPMA.
                     </p>
                 </div>
             </div>
@@ -422,6 +436,7 @@
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
                 <form action="{{ route('reports.koreksi', $report->id) }}" method="POST">
                     @csrf
+                    <input type="hidden" name="_form" value="correction">
                     <div class="modal-header text-white" style="background: linear-gradient(135deg, #134e4a 0%, #0d9488 100%);">
                         <h5 class="modal-title font-weight-bold" id="modalKoreksiLabel">
                             <i class="fas fa-edit mr-1"></i> Koreksi Data Mahasiswa Terlapor
@@ -432,7 +447,7 @@
                     </div>
                     <div class="modal-body p-4">
                         <div class="alert alert-info small mb-4 border-0" style="background: #f0fdfa; color: #0f766e; border-left: 4px solid #0d9488 !important; border-radius: 8px;">
-                            <i class="fas fa-info-circle mr-1"></i> Form ini digunakan jika terdapat salah ketik pada data yang dilaporkan sebelum diteruskan ke Ketua Jurusan.
+                            <i class="fas fa-info-circle mr-1"></i> Gunakan form ini untuk memperbaiki kesalahan penulisan pada data laporan.
                         </div>
 
                         <div class="row">
@@ -451,7 +466,7 @@
                                 <label class="small font-weight-bold text-dark">Jurusan Terlapor</label>
                                 <select name="reported_department" required class="form-control" style="border-radius: 8px;">
                                     @foreach($departments as $dept)
-                                        <option value="{{ $dept }}" {{ $report->reported_department === $dept ? 'selected' : '' }}>{{ $dept }}</option>
+                                        <option value="{{ $dept }}" {{ old('reported_department', $report->reported_department) === $dept ? 'selected' : '' }}>{{ $dept }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -459,7 +474,7 @@
                                 <label class="small font-weight-bold text-dark">Kategori Pelanggaran</label>
                                 <select name="severity" required class="form-control" style="border-radius: 8px;">
                                     @foreach($severities as $sev)
-                                        <option value="{{ $sev }}" {{ $report->severity === $sev ? 'selected' : '' }}>{{ $sev }}</option>
+                                        <option value="{{ $sev }}" {{ old('severity', $report->severity) === $sev ? 'selected' : '' }}>{{ $sev }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -473,7 +488,7 @@
 
                         <div class="form-group mb-0">
                             <label class="small font-weight-bold text-dark">Koreksi Kronologi (Jika Diperlukan)</label>
-                            <textarea name="chronology" rows="3" required class="form-control" style="border-radius: 8px;">{{ old('chronology', $report->chronology) }}</textarea>
+                            <textarea name="chronology" rows="3" class="form-control" style="border-radius: 8px;">{{ old('chronology', $report->chronology) }}</textarea>
                         </div>
                     </div>
                     <div class="modal-footer bg-light">
@@ -486,6 +501,16 @@
             </div>
         </div>
     </div>
+
+    @if($errors->any() && old('_form') === 'correction')
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+                    jQuery('#modalKoreksi').modal('show');
+                }
+            });
+        </script>
+    @endif
 
     <!-- Modal Tolak Laporan (Khusus Kemahasiswaan) -->
     <div class="modal fade" id="modalTolak" tabindex="-1" role="dialog" aria-hidden="true">

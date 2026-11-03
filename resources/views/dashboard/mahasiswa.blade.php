@@ -24,6 +24,7 @@
 
         .step-pill {
             display: inline-flex;
+            flex: 0 0 auto;
             align-items: center;
             padding: 4px 12px;
             border-radius: 20px;
@@ -31,6 +32,7 @@
             font-weight: 700;
             letter-spacing: 0.5px;
             text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .modern-input-group {
@@ -232,7 +234,7 @@
     <div class="card border-0 text-white shadow-sm mb-4 overflow-hidden" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%); border-radius: 16px;">
         <div class="card-body p-4 p-md-5 d-flex flex-column flex-md-row align-items-md-center justify-content-between position-relative">
             <div style="z-index: 2;">
-                <h2 class="font-weight-bold mb-1 text-white">Selamat Datang, {{ auth()->user()->clean_name }}!</h2>
+                <h2 class="font-weight-bold mb-1 text-white">Selamat Datang, {{ auth()->user()->display_name }}!</h2>
                 @if($bridgeProfile && !empty($bridgeProfile['nim']))
                     <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 8px;">
                         <span class="badge" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem; border-radius:20px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3);">
@@ -247,10 +249,7 @@
                         <span class="badge" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem; border-radius:20px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3);">
                             <i class="fas fa-calendar mr-1"></i> Angkatan {{ $bridgeProfile['angkatan'] }}
                         </span>
-                        @endif
-                        <span class="badge" style="background: rgba(74,222,128,0.3); color:#d1fae5; font-size:0.75rem; border-radius:20px; padding: 4px 10px; border: 1px solid rgba(74,222,128,0.4);">
-                            <i class="fas fa-plug mr-1"></i> Terkoneksi via Bridge API
-                        </span>
+                       @endif
                     </div>
                 @else
                     <p class="text-white-50 mb-3" style="max-width: 680px; font-size: 0.9rem;">
@@ -417,7 +416,7 @@
                                 <option value="">-- Pilih Fakultas --</option>
                                 @foreach($faculties as $facName => $deptList)
                                     <option value="{{ $facName }}" {{ old('reported_faculty') === $facName ? 'selected' : '' }}>
-                                        {{ $facName }}
+                                        {{ \App\Http\Controllers\ReportController::facultyDisplayName($facName) }}
                                     </option>
                                 @endforeach
                             </select>
@@ -462,8 +461,7 @@
                                    title="Hanya boleh memasukkan angka">
                         </div>
                         <small class="text-muted mt-1 d-block">
-                            <i class="fas fa-info-circle mr-1 text-info"></i>
-                            Ketik semester perkuliahan mahasiswa terlapor saat ini (hanya angka, contoh: 2, 4, 6).
+                            Ketik semester perkuliahan mahasiswa terlapor saat ini.
                         </small>
                     </div>
                 </div>
@@ -610,22 +608,28 @@
                     <label class="font-weight-bold text-dark small mb-2">Unggah Berkas Bukti Pendukung <span class="text-danger">*</span></label>
                     
                     <div class="dropzone-box" onclick="document.getElementById('evidenceFile').click()">
-                        <input type="file" name="evidence" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4" required style="display: none;">
+                        <input type="file" name="evidence[]" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4" multiple required style="display: none;">
                         <div class="mb-2">
                             <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto text-primary" style="width: 52px; height: 52px; background: #f0fdfa;">
                                 <i class="fas fa-cloud-upload-alt fa-2x"></i>
                             </div>
                         </div>
                         <h6 class="font-weight-bold text-dark mb-1" id="fileNameDisplay">
-                            Klik di sini untuk memilih atau menarik berkas bukti
+                            Klik di sini untuk memilih 1–4 berkas bukti
                         </h6>
                         <p class="text-muted small mb-2" id="fileSubDisplay">
-                            Format yang didukung: <strong>PDF, JPG, PNG, atau MP4</strong> (Maksimal ukuran file: <strong>10 MB</strong>)
+                            Format: <strong>PDF, JPG, PNG, atau MP4</strong> · Maksimal <strong>4 file</strong>, masing-masing 10 MB
                         </p>
+                        <div id="selectedEvidenceFiles" class="d-flex flex-column align-items-center w-100 mb-2"></div>
                         <div class="d-flex justify-content-center flex-wrap">
                             <span class="badge badge-light border text-muted mr-1 mb-1">📄 PDF Dokumen</span>
                             <span class="badge badge-light border text-muted mr-1 mb-1">🖼️ JPG / PNG Foto</span>
                             <span class="badge badge-light border text-muted mb-1">🎥 MP4 Rekaman Video</span>
+                        </div>
+                        <div class="mt-3" onclick="event.stopPropagation();">
+                            <button type="button" id="addEvidenceFile" class="btn btn-outline-primary px-4" style="display: none; border-radius: 12px; font-size: 1.05rem;" onclick="document.getElementById('evidenceFile').click();">
+                                <i class="fas fa-plus mr-1"></i> Tambah Lampiran
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -758,12 +762,59 @@
             const fileNameDisplay = document.getElementById('fileNameDisplay');
             const fileSubDisplay = document.getElementById('fileSubDisplay');
             if (fileInput) {
-                fileInput.addEventListener('change', function (e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        fileNameDisplay.innerHTML = '<span class="text-success"><i class="fas fa-check-circle mr-1"></i> ' + file.name + '</span>';
-                        fileSubDisplay.innerHTML = 'Ukuran berkas: <strong>' + (file.size / (1024 * 1024)).toFixed(2) + ' MB</strong> | Tipe: ' + file.type;
+                const selectedFilesDisplay = document.getElementById('selectedEvidenceFiles');
+                const addFileButton = document.getElementById('addEvidenceFile');
+                let selectedFiles = [];
+                fileInput.addEventListener('click', (event) => event.stopPropagation());
+                const renderSelectedFiles = () => {
+                    const transfer = new DataTransfer();
+                    selectedFiles.forEach((file) => transfer.items.add(file));
+                    fileInput.files = transfer.files;
+                    selectedFilesDisplay.replaceChildren();
+                    fileNameDisplay.textContent = selectedFiles.length ? selectedFiles.length + ' berkas dipilih' : 'Klik di sini untuk memilih 1–4 berkas bukti';
+                    fileNameDisplay.style.fontSize = selectedFiles.length ? '1.35rem' : '';
+                    fileNameDisplay.style.color = selectedFiles.length ? '#475569' : '';
+                    addFileButton.style.display = selectedFiles.length > 0 && selectedFiles.length < 4 ? 'inline-block' : 'none';
+                    fileSubDisplay.innerHTML = selectedFiles.length
+                        ? 'Total ukuran: <strong>' + (selectedFiles.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024)).toFixed(2) + ' MB</strong>'
+                        : 'Format: <strong>PDF, JPG, PNG, atau MP4</strong> · Maksimal <strong>4 file</strong>, masing-masing 10 MB';
+                    selectedFiles.forEach((file, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'd-flex align-items-center justify-content-between bg-white border rounded px-2 py-1 mb-1';
+                        row.style.cssText = 'width: min(100%, 566px); min-height: 44px; gap: 12px; padding: 5px 10px !important;';
+                        const name = document.createElement('span');
+                        name.className = 'text-dark text-truncate';
+                        name.style.cssText = 'font-size: 1.05rem; text-align: left;';
+                        name.textContent = file.name;
+                        const remove = document.createElement('button');
+                        remove.type = 'button';
+                        remove.className = 'btn btn-sm btn-outline-danger py-0 px-2';
+                        remove.style.cssText = 'font-size: 1.15rem; line-height: 1.5; border-radius: 6px;';
+                        remove.setAttribute('aria-label', 'Hapus ' + file.name);
+                        remove.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
+                        remove.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            selectedFiles.splice(index, 1);
+                            renderSelectedFiles();
+                        });
+                        row.append(name, remove);
+                        selectedFilesDisplay.appendChild(row);
+                    });
+                };
+                fileInput.addEventListener('change', () => {
+                    const newlySelected = Array.from(fileInput.files);
+                    if (selectedFiles.length + newlySelected.length > 4) {
+                        alert('Maksimal 4 berkas bukti yang dapat dipilih.');
+                        renderSelectedFiles();
+                        return;
                     }
+                    selectedFiles = selectedFiles.concat(newlySelected);
+                    renderSelectedFiles();
+                });
+                const reportForm = fileInput.closest('form');
+                reportForm?.addEventListener('reset', () => {
+                    selectedFiles = [];
+                    window.setTimeout(renderSelectedFiles, 0);
                 });
             }
         });

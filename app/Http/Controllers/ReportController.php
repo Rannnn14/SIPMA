@@ -10,11 +10,17 @@ use App\Models\Student;
 use App\Models\ViolationType;
 use App\Models\ReportEvidence;
 use App\Models\Faculty;
+use App\Models\AcademicYear;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class ReportController extends Controller
 {
+    public static function facultyDisplayName(?string $name): string
+    {
+        return $name === 'Fakultas Syariah' ? 'FASYA' : ($name ?? '');
+    }
+
     // List of standard faculties and their departments
     public static array $faculties = [
         'FITK' => [
@@ -187,11 +193,16 @@ class ReportController extends Controller
             return redirect()->route('reports.inbox');
         }
 
-        $query = ViolationReport::query()->with(['student', 'reporter', 'verifier', 'handler']);
+        $selectedAcademicYear = session('selected_academic_year_' . $user->id, AcademicYear::getActiveYear());
+
+        $query = ViolationReport::query()
+            ->with(['student', 'reporter', 'verifier', 'handler'])
+            ->whereNotIn('status', ['pending', 'dilaporkan']);
 
         // Kajur: mark reports as viewed (clears dashboard notification)
         if ($user->isKajur()) {
-            session(['kajur_last_viewed_reports_' . $user->id => now()->timestamp]);
+            $yearKey = str_replace('/', '-', $selectedAcademicYear);
+            session(['kajur_last_viewed_reports_' . $user->id . '_' . $yearKey => now()->timestamp]);
         }
 
         // RBAC filtering
@@ -225,9 +236,9 @@ class ReportController extends Controller
         if ($request->filled('severity')) {
             $query->where('severity', $request->severity);
         }
-        // Filter Tahun Akademik (untuk Kajur)
-        if ($user->isKajur() && $request->filled('academic_year') && $request->academic_year !== 'all') {
-            $query->where('academic_year', $request->academic_year);
+        // Semua halaman laporan mengikuti pilihan tahun akademik dari dashboard.
+        if ($selectedAcademicYear !== 'all') {
+            $query->where('academic_year', $selectedAcademicYear);
         }
         if ($request->filled('search')) {
             $search = $request->search;
@@ -239,10 +250,10 @@ class ReportController extends Controller
             });
         }
 
-        $reports = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+        $reports = $query->orderBy('created_at', 'desc')->get();
         $departments = array_keys(self::departmentFacultyMap());
 
-        return view('reports.index', compact('reports', 'departments'));
+        return view('reports.index', compact('reports', 'departments', 'selectedAcademicYear'));
     }
 
     /**
@@ -255,9 +266,15 @@ class ReportController extends Controller
             return redirect()->route('mahasiswa.dashboard');
         }
 
+        $selectedAcademicYear = session('selected_academic_year_' . $user->id, AcademicYear::getActiveYear());
+
         $query = ViolationReport::query()
             ->with(['student', 'reporter', 'verifier', 'handler'])
             ->whereIn('status', ['pending', 'dilaporkan']);
+
+        if ($selectedAcademicYear !== 'all') {
+            $query->where('academic_year', $selectedAcademicYear);
+        }
 
         if ($user->isKajur()) {
             $dept = $user->department;
@@ -292,11 +309,11 @@ class ReportController extends Controller
             });
         }
 
-        $reports = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+        $reports = $query->orderBy('created_at', 'desc')->get();
         $departments = array_keys(self::departmentFacultyMap());
         $faculties = self::facultyDepartmentMap();
 
-        return view('reports.inbox', compact('reports', 'departments', 'faculties'));
+        return view('reports.inbox', compact('reports', 'departments', 'faculties', 'selectedAcademicYear'));
     }
 
     /**
@@ -309,14 +326,21 @@ class ReportController extends Controller
             return redirect()->route('mahasiswa.dashboard');
         }
 
+        $selectedAcademicYear = session('selected_academic_year_' . $user->id, AcademicYear::getActiveYear());
+
         // Kajur sudah membuka halaman Data Laporan, tandai notifikasi sebagai dibaca.
         if ($user->isKajur()) {
-            session(['kajur_last_viewed_reports_' . $user->id => now()->timestamp]);
+            $yearKey = str_replace('/', '-', $selectedAcademicYear);
+            session(['kajur_last_viewed_reports_' . $user->id . '_' . $yearKey => now()->timestamp]);
         }
 
         $query = ViolationReport::query()
             ->with(['student', 'reporter', 'verifier', 'handler'])
             ->whereNotIn('status', ['pending', 'dilaporkan']);
+
+        if ($selectedAcademicYear !== 'all') {
+            $query->where('academic_year', $selectedAcademicYear);
+        }
 
         if ($user->isKajur()) {
             $dept = $user->department;
@@ -354,11 +378,11 @@ class ReportController extends Controller
             });
         }
 
-        $reports = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+        $reports = $query->orderBy('created_at', 'desc')->get();
         $departments = array_keys(self::departmentFacultyMap());
         $faculties = self::facultyDepartmentMap();
 
-        return view('reports.history', compact('reports', 'departments', 'faculties'));
+        return view('reports.history', compact('reports', 'departments', 'faculties', 'selectedAcademicYear'));
     }
 
     public function create()
@@ -380,6 +404,26 @@ class ReportController extends Controller
     {
         $isMahasiswa = Auth::user()->isMahasiswa();
 
+        // PHP menolak upload sebelum Laravel menjalankan validasi jika batas request terlalu kecil.
+        // Berikan pesan yang jelas untuk kondisi tersebut dan error upload lain.
+        $uploadedEvidence = $request->file('evidence', []);
+        foreach ($uploadedEvidence as $index => $file) {
+            if ($file instanceof \Illuminate\Http\UploadedFile && !$file->isValid()) {
+                $message = match ($file->getError()) {
+                    UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Berkas bukti melebihi batas unggahan server. Coba foto/video yang lebih kecil atau naikkan batas upload_max_filesize dan post_max_size pada PHP yang menjalankan aplikasi.',
+                    UPLOAD_ERR_PARTIAL => 'Unggahan berkas bukti terputus sebelum selesai. Periksa koneksi lalu coba kembali.',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Server tidak memiliki folder sementara untuk menerima unggahan. Periksa pengaturan upload_tmp_dir PHP.',
+                    UPLOAD_ERR_CANT_WRITE => 'Server gagal menyimpan unggahan sementara. Periksa ruang disk dan izin folder temporary.',
+                    UPLOAD_ERR_EXTENSION => 'Ekstensi PHP menghentikan unggahan berkas bukti.',
+                    default => 'Unggahan berkas bukti gagal diterima server. Silakan coba kembali.',
+                };
+
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    "evidence.{$index}" => $message,
+                ]);
+            }
+        }
+
         $departmentFacultyMap = self::departmentFacultyMap();
         $rules = [
             'reported_name'        => 'required|string|max:150',
@@ -393,7 +437,8 @@ class ReportController extends Controller
             'severity'             => 'required|string|in:Ringan,Sedang,Berat',
             'chronology'           => 'required|string',
             'evidence'             => 'required|array|min:1|max:4',
-            'evidence.*'           => 'required|file|mimes:pdf,jpg,jpeg,png,mp4|max:10240',
+            // Video sering melebihi batas dokumen/foto dan perangkat menghasilkan format berbeda.
+            'evidence.*'           => 'required|file|mimes:pdf,jpg,jpeg,png,mp4,mov,m4v,webm,3gp|max:51200',
         ];
 
         $request->validate($rules, [
@@ -410,8 +455,8 @@ class ReportController extends Controller
             'chronology.required'          => 'Uraian kronologi kejadian wajib diisi.',
             'evidence.required'            => 'Berkas bukti pendukung wajib diunggah.',
             'evidence.max'                 => 'Maksimal 4 berkas bukti yang dapat diunggah.',
-            'evidence.*.mimes'             => 'Setiap berkas bukti harus berformat PDF, JPG, PNG, atau MP4.',
-            'evidence.*.max'               => 'Ukuran setiap berkas bukti maksimal 10 MB.',
+            'evidence.*.mimes'             => 'Berkas harus berformat PDF, JPG, PNG, MP4, MOV, M4V, WEBM, atau 3GP.',
+            'evidence.*.max'               => 'Ukuran setiap berkas maksimal 50 MB.',
         ]);
 
         $faculty = $departmentFacultyMap[$request->reported_department] ?? null;
@@ -425,9 +470,17 @@ class ReportController extends Controller
         $matchedStudent = Student::where('nim', trim($request->reported_nim))->first();
 
         $evidenceFiles = $request->file('evidence', []);
+        $storedEvidence = [];
+        foreach ($evidenceFiles as $index => $file) {
+            $storedPath = $file->store('evidences', 'public');
+            if (!$storedPath) {
+                throw new \RuntimeException('Gagal menyimpan lampiran. Periksa izin tulis pada storage/app/public.');
+            }
+            $storedEvidence[$index] = $storedPath;
+        }
         $firstEvidence = $evidenceFiles[0] ?? null;
         $evidenceName = $firstEvidence?->getClientOriginalName();
-        $evidencePath = $firstEvidence?->store('evidences', 'public');
+        $evidencePath = $storedEvidence[0] ?? null;
 
         $report = ViolationReport::create([
             'report_number'     => 'REP-' . date('Ymd') . '-' . rand(1000, 9999),
@@ -453,7 +506,7 @@ class ReportController extends Controller
         ]);
 
         foreach ($evidenceFiles as $index => $file) {
-            $filePath = $index === 0 ? $evidencePath : $file->store('evidences', 'public');
+            $filePath = $storedEvidence[$index];
             ReportEvidence::create([
                 'violation_report_id' => $report->id,
                 'original_name' => $file->getClientOriginalName(),
@@ -463,14 +516,14 @@ class ReportController extends Controller
         }
 
         if (Auth::user()->isMahasiswa()) {
-            return redirect()->route('reports.create')->with('success', 'Laporan Anda berhasil dikirim ke Bagian Kemahasiswaan secara aman dan terlindungi (Anonim). Terima kasih atas partisipasi Anda.');
+            return redirect()->route('reports.create')->with('success', 'Laporan Anda berhasil dikirim ke Bagian Kemahasiswaan. Terima kasih atas partisipasi Anda.');
         }
 
         if (Auth::user()->isKajur()) {
-            return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan dari Ketua Jurusan dan sedang menunggu verifikasi Bagian Kemahasiswaan.');
+            return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan untuk proses verifikasi.');
         }
 
-        return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan dan sedang menunggu verifikasi Bagian Kemahasiswaan.');
+        return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan untuk proses verifikasi.');
     }
 
     public function show($id)
@@ -548,31 +601,28 @@ class ReportController extends Controller
 
         $report = ViolationReport::findOrFail($id);
 
-        if (!in_array($report->status, ['pending', 'dilaporkan', 'ditolak'], true)) {
-            return back()->with('error', 'Laporan ini sudah terverifikasi dan diteruskan ke Ketua Jurusan.');
-        }
-
-        $request->validate([
+        $data = $request->validate([
             'reported_name' => 'required|string|max:150',
             'reported_nim' => 'required|string|max:50',
             'reported_department' => ['required', 'string', Rule::in(array_keys(self::departmentFacultyMap()))],
-            'severity' => 'required|string|in:Ringan,Sedang,Berat,Suspek',
+            'severity' => ['required', 'string', Rule::in(self::$severities)],
             'points' => 'nullable|integer|min:0',
             'incident_location' => 'required|string|max:255',
-            'chronology' => 'required|string',
+            'chronology' => 'nullable|string',
         ]);
 
         // Attempt matching student
-        $matchedStudent = Student::where('nim', trim($request->reported_nim))->first();
+        $matchedStudent = Student::where('nim', trim($data['reported_nim']))->first();
 
         $report->update([
-            'reported_name' => $request->reported_name,
-            'reported_nim' => $request->reported_nim,
-            'reported_department' => $request->reported_department,
-            'severity' => $request->severity,
+            'reported_name' => trim($data['reported_name']),
+            'reported_nim' => trim($data['reported_nim']),
+            'reported_department' => $data['reported_department'],
+            'target_department' => $data['reported_department'],
+            'severity' => $data['severity'],
             'points' => 0, // Sistem poin telah ditiadakan
-            'incident_location' => $request->incident_location,
-            'chronology' => $request->chronology,
+            'incident_location' => trim($data['incident_location']),
+            'chronology' => isset($data['chronology']) ? trim($data['chronology']) : null,
             'student_id' => $matchedStudent?->id ?? $report->student_id,
         ]);
 
@@ -610,7 +660,7 @@ class ReportController extends Controller
             'kajur_notes' => null,
         ]);
 
-        return back()->with('success', "Laporan berhasil DISETUJUI dan DITERUSKAN ke Ketua Jurusan {$targetDept}.");
+        return back()->with('success', 'Laporan berhasil diverifikasi. Status: Terverifikasi.');
     }
 
     // Kemahasiswaan Action 3: Tolak Laporan
@@ -642,50 +692,16 @@ class ReportController extends Controller
         return back()->with('success', 'Laporan telah DITOLAK. Pelapor dapat membaca alasan penolakan pada status laporan.');
     }
 
-    // Kajur Action: Tindak Lanjut (Diproses -> Selesai)
-    public function tindakLanjut(Request $request, $id)
-    {
-        $user = Auth::user();
-        if (!$user->isKajur()) {
-            abort(403, 'Hanya Ketua Jurusan yang berwenang melakukan tindak lanjut sanksi.');
-        }
-
-        $report = ViolationReport::findOrFail($id);
-
-        abort_if($report->status === 'ditolak', 404);
-
-        // Department authorization
-        if ($report->target_department !== $user->department && $report->reported_department !== $user->department) {
-            abort(403, 'Laporan ini bukan wewenang jurusan Anda.');
-        }
-
-        $request->validate([
-            'status' => 'required|in:diproses,selesai',
-            'sanction_type' => 'required|string|max:150',
-            'kajur_notes' => 'required|string|min:5',
-        ]);
-
-        $report->status = $request->status;
-        $report->sanction_type = $request->sanction_type;
-        $report->kajur_notes = $request->kajur_notes;
-        $report->handled_by = $user->id;
-        $report->handled_at = now();
-
-        if ($request->status === 'selesai') {
-            $report->completed_at = now();
-        }
-
-        $report->save();
-
-        $statusMsg = $request->status === 'selesai' ? 'SELESAI TINDAK LANJUT' : 'SEDANG DIPROSES';
-        return back()->with('success', "Status kasus berhasil diperbarui menjadi: {$statusMsg}. Catatan sanksi telah tersimpan.");
-    }
-
     // Export Excel / CSV: Khusus data riwayat yang sudah terverifikasi
-    public function exportExcel()
+    public function exportExcel(Request $request)
     {
         $user = Auth::user();
         $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan', 'ditolak']);
+
+        $selectedAcademicYear = session('selected_academic_year_' . ($user?->id ?? ''), AcademicYear::getActiveYear());
+        if ($selectedAcademicYear && $selectedAcademicYear !== 'all') {
+            $query->where('academic_year', $selectedAcademicYear);
+        }
 
         if ($user && $user->isKajur()) {
             $dept = $user->department;
@@ -759,6 +775,11 @@ class ReportController extends Controller
     {
         $user = Auth::user();
         $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan', 'ditolak']);
+
+        $selectedAcademicYear = session('selected_academic_year_' . ($user?->id ?? ''), AcademicYear::getActiveYear());
+        if ($selectedAcademicYear !== 'all') {
+            $query->where('academic_year', $selectedAcademicYear);
+        }
 
         if ($user && $user->isKajur()) {
             $dept = $user->department;

@@ -47,7 +47,7 @@ class AccountController extends Controller
 
         $accounts = $query->orderByRaw("CASE role WHEN 'warek' THEN 0 WHEN 'wadek3' THEN 1 WHEN 'kajur' THEN 2 ELSE 3 END")
             ->orderBy('faculty')->orderBy('department')->orderBy('name')
-            ->paginate(20)->withQueryString();
+            ->get();
 
         $counts = User::query()->whereIn('role', self::MANAGED_ROLES)
             ->select('role', DB::raw('COUNT(*) as total'))
@@ -169,9 +169,11 @@ class AccountController extends Controller
             'new_faculty' => ['nullable', 'string', 'max:150'],
             'new_department' => ['nullable', 'string', 'max:150'],
             'password' => $user
-                ? ['nullable', 'string', Password::min(12)->letters()->numbers(), 'confirmed']
+                ? ['sometimes', 'nullable', 'string', Password::min(12)->letters()->numbers(), 'confirmed']
                 : ['required', 'string', Password::min(12)->letters()->numbers(), 'confirmed'],
-            'password_confirmation' => ['required_with:password', 'string'],
+            'password_confirmation' => $user
+                ? ['nullable', 'string']
+                : ['required', 'string'],
         ]);
 
         $needsFaculty = in_array($data['role'], ['kajur', 'wadek3'], true);

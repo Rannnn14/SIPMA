@@ -12,7 +12,7 @@
                         </div>
                         <div>
                             <h5 class="font-weight-bold text-white mb-0" style="letter-spacing: -0.2px;">Alur Penanganan Pelanggaran Mahasiswa</h5>
-                            <small class="text-white-50">Monitoring laporan mahasiswa di lingkungan {{ $myFaculty }} — hanya tampilan grafik</small>
+                            <small class="text-white-50">Monitoring laporan mahasiswa di lingkungan {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }} — hanya tampilan grafik</small>
                         </div>
                     </div>
                     <form method="GET" action="{{ route('wadek3.dashboard') }}" class="m-0 mt-2 mt-md-0">
@@ -73,7 +73,7 @@
                                 <i class="fas fa-folder-open fa-xl text-white"></i>
                             </div>
                             <span class="badge" style="background: rgba(255,255,255,0.18); color: #fff; border-radius: 20px; font-size: 0.72rem; padding: 5px 12px; border: 1px solid rgba(255,255,255,0.2);">
-                                {{ $myFaculty }}
+                                {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }}
                             </span>
                         </div>
                         <div>
@@ -94,7 +94,7 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-header py-3 bg-white d-flex align-items-center justify-content-between border-bottom">
                         <h6 class="m-0 font-weight-bold" style="color: #0d9488;">
-                            <i class="fas fa-chart-bar mr-1"></i> Rekap Kasus per Jurusan ({{ $myFaculty }})
+                            <i class="fas fa-chart-bar mr-1"></i> Rekap Kasus per Jurusan ({{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }})
                         </h6>
                         <button type="button" class="btn btn-sm btn-light border font-weight-bold px-2 py-1"
                                 id="expandWadekDeptBtn"
@@ -140,7 +140,7 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header py-3 bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap" style="gap: 10px;">
                 <h6 class="m-0 font-weight-bold" style="color: #0d9488;">
-                    <i class="fas fa-table mr-1"></i> Rekapitulasi Jurusan di Lingkungan {{ $myFaculty }}
+                    <i class="fas fa-table mr-1"></i> Rekapitulasi Jurusan di Lingkungan {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }}
                 </h6>
                 <!-- Filter -->
                 <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
@@ -295,7 +295,7 @@
                 scales: {
                     x: {
                         beginAtZero: true,
-                        ticks: { stepSize: 1, precision: 0 }
+                        ticks: { precision: 0, maxTicksLimit: 6 }
                     },
                     y: {
                         ticks: {
@@ -312,11 +312,11 @@
         // Expand button for Dept Chart
         function openWadekDeptModal() {
             openChartModal(
-                'Rekap Kasus per Jurusan — {{ $myFaculty }}',
+                'Rekap Kasus per Jurusan — {{ \App\Http\Controllers\ReportController::facultyDisplayName($myFaculty) }}',
                 'bar',
                 allDeptLabels,
                 [{ label: 'Jumlah Kasus', data: allDeptData, backgroundColor: '#0d9488', borderRadius: 6 }],
-                { indexAxis: 'y', animation: { duration: 900, easing: 'easeOutQuart' }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } }, y: { ticks: { autoSkip: false } } }, plugins: { legend: { display: false } } }
+                { indexAxis: 'y', animation: { duration: 900, easing: 'easeOutQuart' }, scales: { x: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } }, y: { ticks: { autoSkip: false } } }, plugins: { legend: { display: false } } }
             );
         }
         const expandBtn = document.getElementById('expandWadekDeptBtn');
