@@ -190,8 +190,12 @@
                 document.getElementById('warekExpandedChartTitle').textContent = 'Laporan per Jurusan — ' + data.name;
                 document.getElementById('warekExpandedChartSubtitle').textContent = 'Jumlah laporan terverifikasi per jurusan';
                 if (expandedChart) expandedChart.destroy();
-                document.getElementById('warekExpandedChartCanvasArea').style.height = Math.max(420, data.labels.length * 52) + 'px';
-                expandedChart = new Chart(document.getElementById('warekExpandedDeptChart'), {type:'bar',data:{labels:data.labels,datasets:[{label:'Jumlah',data:data.values,backgroundColor:'#0d9488',borderRadius:7,barThickness:26}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart'},scales:{x:{beginAtZero:true,ticks:{precision:0,maxTicksLimit:6}},y:{ticks:{autoSkip:false,font:{size:13,weight:'600'}}}},plugins:{legend:{display:false},tooltip:{enabled:true}}}});
+                const allWarekVals = (data.values || []).map(Number);
+                const maxWarekVal = allWarekVals.length ? Math.max(...allWarekVals) : 0;
+                const suggestedWarekMax = Math.max(maxWarekVal > 0 ? Math.ceil(maxWarekVal * 1.1) : 5, 5);
+                const barSpacing = Math.min(36, Math.max(22, 420 / (data.labels.length || 1)));
+                document.getElementById('warekExpandedChartCanvasArea').style.height = Math.min(480, Math.max(300, data.labels.length * barSpacing)) + 'px';
+                expandedChart = new Chart(document.getElementById('warekExpandedDeptChart'), {type:'bar',data:{labels:data.labels,datasets:[{label:'Jumlah',data:data.values,backgroundColor:'#0d9488',borderRadius:7,maxBarThickness:24}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart'},scales:{x:{beginAtZero:true,suggestedMax:suggestedWarekMax,ticks:{precision:0,maxTicksLimit:6}},y:{ticks:{autoSkip:false,font:{size:12,weight:'600'}}}},plugins:{legend:{display:false},tooltip:{enabled:true}}}});
                 chartModal.style.display = 'flex';
             };
             document.getElementById('expandWarekDeptChart').addEventListener('click', expandChart);

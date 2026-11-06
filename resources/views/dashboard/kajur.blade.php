@@ -358,6 +358,8 @@
             const dataCounts = {!! json_encode(array_values($severityCounts)) !!};
             const labels = ['Ringan', 'Sedang', 'Berat'];
             const colors = ['#10b981', '#f59e0b', '#ef4444'];
+            const maxKajurVal = Math.max(...dataCounts.map(Number), 0);
+            const suggestedKajurMax = Math.max(maxKajurVal > 0 ? Math.ceil(maxKajurVal * 1.1) : 5, 5);
 
             const chart = new Chart(ctx, {
                 type: 'bar',
@@ -370,6 +372,7 @@
                         borderColor: colors,
                         borderWidth: 1,
                         borderRadius: 8,
+                        maxBarThickness: 36,
                     }]
                 },
                 options: {
@@ -377,7 +380,7 @@
                     maintainAspectRatio: false,
                     animation: { duration: 900, easing: 'easeOutQuart' },
                     scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } }
+                        y: { beginAtZero: true, suggestedMax: suggestedKajurMax, ticks: { precision: 0, maxTicksLimit: 6 } }
                     },
                     plugins: {
                         legend: { display: false }

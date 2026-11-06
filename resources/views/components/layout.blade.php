@@ -192,6 +192,9 @@
             font-weight: 600 !important;
             box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35) !important;
         }
+        .sidebar .nav-item.active .nav-link i {
+            color: #ffffff !important;
+        }
         .sidebar-heading {
             font-size: 0.68rem !important;
             font-weight: 700 !important;
@@ -364,7 +367,7 @@
 
         <ul class="navbar-nav sidebar sidebar-dark accordion" id="accordionSidebar">
             <a class="sidebar-brand d-flex align-items-center justify-content-center py-3" href="{{ $dashboardRoute }}" aria-label="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa">
-                <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261027-4" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa" style="display:block;width:100%;max-width:190px;height:88px;object-fit:contain;">
+                <img src="{{ asset('img/sipma-logo-horizontal.png') }}?v=20261103-1" alt="SIPMA — Sistem Pendataan Pelanggaran Mahasiswa" style="display:block;width:100%;max-width:190px;height:auto;max-height:72px;object-fit:contain;">
             </a>
 
             <hr class="sidebar-divider my-0">
@@ -387,6 +390,12 @@
             <hr class="sidebar-divider">
             <div class="sidebar-heading">Menu Kasus & Pelaporan</div>
 
+            @php
+                $isInboxActive = request()->routeIs('reports.inbox') || (request()->routeIs('reports.show') && isset($report) && in_array($report->status, ['pending', 'dilaporkan']));
+                $isHistoryActive = request()->routeIs('reports.history') || (auth()->user()->isKemahasiswaan() && request()->routeIs('reports.index')) || (request()->routeIs('reports.show') && (!isset($report) || !in_array($report->status, ['pending', 'dilaporkan'])));
+                $isKajurDataActive = request()->routeIs('reports.index') || request()->routeIs('reports.show') || request()->routeIs('reports.history');
+            @endphp
+
             @if(auth()->user()->isKemahasiswaan() || auth()->user()->isKajur())
             <li class="nav-item {{ request()->routeIs('reports.create') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('reports.create') }}">
@@ -397,27 +406,27 @@
             @endif
 
             @if(auth()->user()->isKemahasiswaan())
-            <li class="nav-item {{ request()->routeIs('reports.inbox') ? 'active' : '' }}">
+            <li class="nav-item {{ $isInboxActive ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('reports.inbox') }}">
                     <i class="fas fa-inbox text-warning"></i>
                     <span>Inbox Verifikasi</span>
                 </a>
             </li>
-            <li class="nav-item {{ request()->routeIs('reports.history') ? 'active' : '' }}">
+            <li class="nav-item {{ $isHistoryActive ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('reports.history') }}">
                     <i class="fas fa-history text-info"></i>
                     <span>Riwayat Laporan</span>
                 </a>
             </li>
             @elseif(auth()->user()->isKajur())
-            <li class="nav-item {{ request()->routeIs('reports.index') ? 'active' : '' }}">
+            <li class="nav-item {{ $isKajurDataActive ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('reports.index') }}">
                     <i class="fas fa-clipboard-list text-info"></i>
                     <span>Data Laporan</span>
                 </a>
             </li>
             @else
-            <li class="nav-item {{ request()->routeIs('reports.index') ? 'active' : '' }}">
+            <li class="nav-item {{ request()->routeIs('reports.index') || request()->routeIs('reports.show') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('reports.index') }}">
                     <i class="fas fa-clipboard-list text-info"></i>
                     <span>Rekapitulasi Pelanggaran</span>
@@ -440,7 +449,7 @@
             <hr class="sidebar-divider">
             <div class="sidebar-heading">Ekspor & Rekapitulasi</div>
 
-            <li class="nav-item">
+            <li class="nav-item {{ request()->routeIs('reports.export.*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('reports.export.excel') }}">
                     <i class="fas fa-file-excel text-success"></i>
                     <span>Ekspor Data Excel</span>
@@ -495,16 +504,18 @@
             </a>
             @endif
             @if(auth()->user()->isKemahasiswaan())
-            <a class="sipma-mobile-nav-item {{ request()->routeIs('reports.inbox') ? 'active' : '' }}" href="{{ route('reports.inbox') }}">
+            <a class="sipma-mobile-nav-item {{ $isInboxActive ? 'active' : '' }}" href="{{ route('reports.inbox') }}">
                 <i class="fas fa-inbox" aria-hidden="true"></i><span>Inbox</span>
             </a>
-            @endif
-            @if(auth()->user()->isKemahasiswaan() || auth()->user()->isKajur())
-            <a class="sipma-mobile-nav-item {{ (auth()->user()->isKajur() && request()->routeIs('reports.index')) || (auth()->user()->isKemahasiswaan() && request()->routeIs('reports.history')) ? 'active' : '' }}" href="{{ auth()->user()->isKajur() ? route('reports.index') : route('reports.history') }}">
-                <i class="fas fa-clipboard-list" aria-hidden="true"></i><span>{{ auth()->user()->isKajur() ? 'Data' : 'Riwayat' }}</span>
+            <a class="sipma-mobile-nav-item {{ $isHistoryActive ? 'active' : '' }}" href="{{ route('reports.history') }}">
+                <i class="fas fa-history" aria-hidden="true"></i><span>Riwayat</span>
+            </a>
+            @elseif(auth()->user()->isKajur())
+            <a class="sipma-mobile-nav-item {{ $isKajurDataActive ? 'active' : '' }}" href="{{ route('reports.index') }}">
+                <i class="fas fa-clipboard-list" aria-hidden="true"></i><span>Data</span>
             </a>
             @else
-            <a class="sipma-mobile-nav-item {{ request()->routeIs('reports.index') ? 'active' : '' }}" href="{{ route('reports.index') }}">
+            <a class="sipma-mobile-nav-item {{ request()->routeIs('reports.index') || request()->routeIs('reports.show') ? 'active' : '' }}" href="{{ route('reports.index') }}">
                 <i class="fas fa-chart-bar" aria-hidden="true"></i><span>Rekap</span>
             </a>
             @endif
@@ -722,16 +733,43 @@
                 const wrapper = document.getElementById('chartModalCanvasWrapper');
                 if (wrapper) {
                     const isHorizontal = options && options.indexAxis === 'y';
+                    const allVals = datasets.flatMap(d => (d.data || []).map(Number).filter(v => !isNaN(v)));
+                    const maxVal = allVals.length ? Math.max(...allVals) : 0;
+                    const suggestedMax = Math.max(maxVal > 0 ? Math.ceil(maxVal * 1.1) : 5, 5);
+
                     if (isHorizontal && labels && labels.length > 5) {
-                        // Beri ruang tiap label/bar dan scroll di modal untuk daftar panjang.
-                        wrapper.style.height = Math.max(520, labels.length * 52) + 'px';
-                        wrapper.style.maxHeight = 'calc(100vh - 190px)';
+                        const barSpacing = Math.min(36, Math.max(22, 420 / labels.length));
+                        wrapper.style.height = Math.min(480, Math.max(300, labels.length * barSpacing)) + 'px';
+                        wrapper.style.maxHeight = 'calc(100vh - 200px)';
                         wrapper.style.overflowY = 'auto';
                     } else {
-                        wrapper.style.height = '65vh';
+                        wrapper.style.height = 'min(440px, 58vh)';
                         wrapper.style.maxHeight = '';
                         wrapper.style.overflowY = 'hidden';
                     }
+
+                    datasets.forEach(d => {
+                        if (!d.maxBarThickness) d.maxBarThickness = 26;
+                        if (!d.borderRadius) d.borderRadius = 6;
+                    });
+
+                    const mergedScales = Object.assign({}, options?.scales || {});
+                    if (isHorizontal) {
+                        mergedScales.x = Object.assign({
+                            beginAtZero: true,
+                            suggestedMax: suggestedMax,
+                            ticks: { precision: 0, maxTicksLimit: 6 }
+                        }, mergedScales.x || {});
+                        if (mergedScales.x.suggestedMax === undefined) mergedScales.x.suggestedMax = suggestedMax;
+                    } else if (type === 'bar' || type === 'line') {
+                        mergedScales.y = Object.assign({
+                            beginAtZero: true,
+                            suggestedMax: suggestedMax,
+                            ticks: { precision: 0, maxTicksLimit: 6 }
+                        }, mergedScales.y || {});
+                        if (mergedScales.y.suggestedMax === undefined) mergedScales.y.suggestedMax = suggestedMax;
+                    }
+
                     wrapper.innerHTML = '<canvas id="chartModalCanvas"></canvas>';
                     const canvas = document.getElementById('chartModalCanvas');
                     modalChart = new Chart(canvas, {
@@ -740,11 +778,11 @@
                         options: Object.assign({
                             responsive: true,
                             maintainAspectRatio: false,
-                            animation: { duration: 1800, easing: 'easeOutBounce' },
+                            animation: { duration: 900, easing: 'easeOutQuart' },
                             plugins: {
                                 legend: { position: type === 'bar' ? (isHorizontal ? 'bottom' : 'top') : 'bottom' }
                             }
-                        }, options || {})
+                        }, options || {}, { scales: mergedScales })
                     });
                 }
             };

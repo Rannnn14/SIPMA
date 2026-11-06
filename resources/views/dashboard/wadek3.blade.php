@@ -273,6 +273,8 @@
         const deptData   = @json(array_slice(array_values($deptStats), 0, 5));
         const allDeptLabels = @json(array_keys($deptStats));
         const allDeptData = @json(array_values($deptStats));
+        const maxWadekVal = Math.max(...deptData.map(Number), 0);
+        const suggestedWadekMax = Math.max(maxWadekVal > 0 ? Math.ceil(maxWadekVal * 1.1) : 5, 5);
 
         const wadekDeptChart = new Chart(document.getElementById('deptChart'), {
             type: 'bar',
@@ -283,7 +285,7 @@
                     data: deptData,
                     backgroundColor: '#0d9488',
                     borderRadius: 6,
-                    barThickness: 18
+                    maxBarThickness: 20
                 }]
             },
             options: {
@@ -295,6 +297,7 @@
                 scales: {
                     x: {
                         beginAtZero: true,
+                        suggestedMax: suggestedWadekMax,
                         ticks: { precision: 0, maxTicksLimit: 6 }
                     },
                     y: {

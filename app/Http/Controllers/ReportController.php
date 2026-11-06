@@ -482,8 +482,13 @@ class ReportController extends Controller
         $evidenceName = $firstEvidence?->getClientOriginalName();
         $evidencePath = $storedEvidence[0] ?? null;
 
+        // Nomor laporan berurutan dimulai dari 1 (misal: REP-202611-001)
+        $latestReport = ViolationReport::orderBy('id', 'desc')->first();
+        $nextNumber = $latestReport ? ($latestReport->id + 1) : 1;
+        $reportNumber = 'REP-' . date('Ym') . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+
         $report = ViolationReport::create([
-            'report_number'     => 'REP-' . date('Ymd') . '-' . rand(1000, 9999),
+            'report_number'     => $reportNumber,
             'student_id'        => $matchedStudent?->id,
             'reported_name'     => $request->reported_name,
             'reported_nim'      => $request->reported_nim,
@@ -555,7 +560,7 @@ class ReportController extends Controller
         return view('reports.show', compact('report', 'departments', 'severities', 'sanctionOptions'));
     }
 
-    public function previewEvidence($id, $evidenceId = null)
+    private function resolveEvidenceAndAuthorize($id, $evidenceId = null): array
     {
         $report = ViolationReport::with('evidences')->findOrFail($id);
         $user = Auth::user();
@@ -568,18 +573,18 @@ class ReportController extends Controller
         }
         $filePath = $evidence?->file_path ?? $report->evidence_path;
         $fileName = $evidence?->original_name ?? $report->evidence_name ?? 'Berkas Bukti';
-        $fileMimeType = $evidence?->mime_type ?? \Illuminate\Support\Facades\Storage::disk('public')->mimeType($filePath);
+        $fileMimeType = $evidence?->mime_type ?? Storage::disk('public')->mimeType($filePath);
         if (!$filePath) {
             abort(404, 'Berkas bukti tidak ditemukan.');
         }
         if ($user->isMahasiswa()) {
-            return redirect()->route('mahasiswa.dashboard')->with('error', 'Mahasiswa hanya memiliki hak akses untuk melakukan pelaporan pelanggaran.');
+            abort(403, 'Mahasiswa hanya memiliki hak akses untuk melakukan pelaporan pelanggaran.');
         }
         if ($user->isKajur()) {
             abort_if($report->status === 'ditolak', 404);
-        }
-        if ($user->isKajur() && $report->target_department !== $user->department && $report->reported_department !== $user->department) {
-            abort(403, 'Laporan ini tidak ditujukan untuk jurusan Anda.');
+            if ($report->target_department !== $user->department && $report->reported_department !== $user->department) {
+                abort(403, 'Laporan ini tidak ditujukan untuk jurusan Anda.');
+            }
         }
         if ($user->isDekan() || $user->isWadek3()) {
             $allowedDepts = array_keys(array_filter(self::departmentFacultyMap(), fn ($faculty) => $faculty === $user->faculty));
@@ -588,7 +593,52 @@ class ReportController extends Controller
             }
         }
 
-        return view('reports.evidence-preview', compact('filePath', 'fileName', 'fileMimeType'));
+        return [$report, $evidence, $filePath, $fileName, $fileMimeType];
+    }
+
+    public function previewEvidence($id, $evidenceId = null)
+    {
+        [$report, $evidence, $filePath, $fileName, $fileMimeType] = $this->resolveEvidenceAndAuthorize($id, $evidenceId);
+
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $videoExtensions = ['mp4', 'mov', 'm4v', 'webm', '3gp', 'mkv', 'avi', 'ogg'];
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+
+        $isVideo = str_starts_with($fileMimeType ?? '', 'video/') || in_array($extension, $videoExtensions);
+        $isImage = str_starts_with($fileMimeType ?? '', 'image/') || in_array($extension, $imageExtensions);
+
+        $streamUrl = route('reports.evidence.stream', ['id' => $report->id, 'evidenceId' => $evidence?->id]);
+
+        return view('reports.evidence-preview', compact('report', 'evidence', 'filePath', 'fileName', 'fileMimeType', 'isVideo', 'isImage', 'streamUrl'));
+    }
+
+    public function streamEvidence(Request $request, $id, $evidenceId = null)
+    {
+        [$report, $evidence, $filePath, $fileName, $fileMimeType] = $this->resolveEvidenceAndAuthorize($id, $evidenceId);
+
+        $disk = Storage::disk('public');
+        if (!$disk->exists($filePath)) {
+            abort(404, 'Berkas fisik tidak ditemukan di server.');
+        }
+
+        $fullPath = $disk->path($filePath);
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $videoMimes = [
+            'mp4'  => 'video/mp4',
+            'mov'  => 'video/quicktime',
+            'm4v'  => 'video/mp4',
+            'webm' => 'video/webm',
+            '3gp'  => 'video/3gpp',
+            'ogg'  => 'video/ogg',
+            'mkv'  => 'video/x-matroska',
+        ];
+        $mimeType = $videoMimes[$extension] ?? $fileMimeType ?? $disk->mimeType($filePath) ?? 'application/octet-stream';
+
+        return response()->file($fullPath, [
+            'Content-Type'        => $mimeType,
+            'Accept-Ranges'       => 'bytes',
+            'Content-Disposition' => 'inline; filename="' . addslashes($fileName) . '"',
+        ]);
     }
 
     // Kemahasiswaan Action 1: Koreksi Data Pelanggar

@@ -723,6 +723,8 @@
             const facLabels = {!! json_encode(array_map([\App\Http\Controllers\ReportController::class, 'facultyDisplayName'], array_keys($facultyCounts))) !!};
             const facData = {!! json_encode(array_values($facultyCounts)) !!};
             const facColors = ['#0d9488', '#0891b2', '#d97706', '#7c3aed', '#64748b'];
+            const maxFacVal = Math.max(...facData.map(Number), 0);
+            const suggestedFacMax = Math.max(maxFacVal > 0 ? Math.ceil(maxFacVal * 1.1) : 5, 5);
 
             const facChartInst = new Chart(facCtx, {
                 type: 'bar',
@@ -733,7 +735,7 @@
                         data: facData,
                         backgroundColor: facColors,
                         borderRadius: 8,
-                        barThickness: 36,
+                        maxBarThickness: 32,
                     }]
                 },
                 options: {
@@ -743,6 +745,7 @@
                     scales: {
                         y: {
                             beginAtZero: true,
+                            suggestedMax: suggestedFacMax,
                             ticks: { precision: 0, maxTicksLimit: 6, font: { size: 12 } },
                             grid: { color: '#f1f5f9' }
                         },
@@ -854,9 +857,11 @@
                         const ctx = canvasEl.getContext('2d');
                         const labels = {!! json_encode(array_keys($chartItems)) !!};
                         const data   = {!! json_encode(array_values($chartItems)) !!};
+                        const maxDeptVal = Math.max(...data.map(Number), 0);
+                        const suggestedDeptMax = Math.max(maxDeptVal > 0 ? Math.ceil(maxDeptVal * 1.1) : 5, 5);
 
-                        // Ringkasan hanya menampilkan lima jurusan teratas.
-                        canvasEl.parentElement.style.height = Math.max(180, labels.length * 42) + 'px';
+                        // Ringkasan proporsional dan tidak berlebihan
+                        canvasEl.parentElement.style.height = Math.min(240, Math.max(160, labels.length * 32)) + 'px';
 
                         new Chart(ctx, {
                             type: 'bar',
@@ -867,7 +872,7 @@
                                     data: data,
                                     backgroundColor: '#0d9488',
                                     borderRadius: 6,
-                                    barThickness: 20,
+                                    maxBarThickness: 20,
                                 }]
                             },
                             options: {
@@ -878,6 +883,7 @@
                                 scales: {
                                     x: {
                                         beginAtZero: true,
+                                        suggestedMax: suggestedDeptMax,
                                         ticks: { precision: 0, maxTicksLimit: 6 },
                                         grid: { color: '#f8fafc' }
                                     },
