@@ -577,7 +577,7 @@
                 <div class="d-flex align-items-center">
                     <div class="text-right mr-3">
                         <div class="font-weight-bold text-dark small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ auth()->user()->display_name }}</div>
-                        <div class="text-xs text-muted font-weight-bold">{{ auth()->user()->nim ?? (auth()->user()->student?->nim ?? '2024001') }}</div>
+                        <div class="text-xs text-muted font-weight-bold">{{ auth()->user()->nim ?? auth()->user()->student?->nim ?? '' }}</div>
                     </div>
                     <form method="POST" action="{{ route('logout') }}" class="mb-0">
                         @csrf

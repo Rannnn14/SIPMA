@@ -40,23 +40,15 @@ composer install
 php artisan key:generate
 php artisan config:clear
 php artisan migrate
-php artisan db:seed
 php artisan storage:link
 php -d upload_max_filesize=50M -d post_max_size=210M -d upload_tmp_dir=storage/app/tmp -d sys_temp_dir=storage/app/tmp artisan serve
 ```
 
-Buka alamat yang dicetak oleh `php artisan serve`. Migrasi membuat tabel MySQL aplikasi. Seeder menambahkan data contoh untuk alur mahasiswa, Kemahasiswaan, Kajur, dan Warek. **Seeder mengosongkan data SIPMA yang sudah ada pada tabel pengguna, laporan, dan master pelanggaran.** Jalankan `php artisan db:seed` hanya pada database baru/kosong. Untuk database yang sudah berisi data, cukup jalankan `php artisan migrate`.
+Buka alamat yang dicetak oleh `php artisan serve`. Migrasi membuat tabel MySQL aplikasi. Mahasiswa masuk melalui Bridge API kampus; akun internal dibuat dari menu pengelolaan akun. `php artisan db:seed` hanya mengisi master kategori dan jenis pelanggaran, tanpa menghapus data atau membuat akun dan laporan dummy.
 
 ### 4. Coba alur kerja
 
-Login akun demo yang dibuat seeder (kata sandi awal semua akun: `password`):
-
-- Mahasiswa: username/NIM `2024001`
-- Kemahasiswaan: username `kemahasiswaan`
-- Ketua Jurusan Informatika: username `kajur_if`
-- Warek: username `warek`
-
-Kirim laporan dari akun mahasiswa dengan bukti lampiran. Login Kemahasiswaan untuk memeriksa inbox, koreksi bila perlu, lalu setujui dan teruskan laporan. Laporan akan berstatus terverifikasi di akun Kajur jurusan terkait; Kajur dapat mengisi tindak lanjut. Dashboard Warek menampilkan rekap dan grafik berdasarkan laporan dalam database.
+Mahasiswa masuk menggunakan NIM dan kata sandi portal kampus melalui Bridge API. Akun Kemahasiswaan, Kajur, Dekan, Wadek III, dan Warek dikelola melalui menu pengelolaan akun. Setelah login, kirim laporan dengan bukti lampiran; Kemahasiswaan memeriksa dan meneruskannya ke Kajur, yang dapat mengisi tindak lanjut. Dashboard menampilkan data laporan yang benar-benar tersimpan.
 
 Jika koneksi gagal, pastikan layanan MySQL hidup, database dan kredensial di `.env` benar, lalu jalankan `php artisan config:clear`.
 

@@ -8,7 +8,7 @@
                 </div>
                 <h2 class="font-weight-bold mb-2 text-white">Dashboard Manajemen & Verifikasi</h2>
                 <p class="text-white-50 mb-3" style="max-width: 720px;">
-                    Pusat pemantauan rekapitulasi pelanggaran, antrean verifikasi Kaprodi, eskalasi poin ≥ 100, dan pemantauan penanganan.
+                    Pusat pemantauan rekapitulasi pelanggaran, antrean verifikasi Kaprodi, dan tindak lanjut kasus.
                 </p>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('reports.index') }}" class="btn btn-warning btn-sm font-weight-bold text-dark px-3 rounded-pill">

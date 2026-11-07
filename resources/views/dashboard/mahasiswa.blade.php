@@ -391,7 +391,7 @@
                         <div class="modern-input-group">
                             <i class="fas fa-user input-icon"></i>
                             <input type="text" name="reported_name" value="{{ old('reported_name') }}" required 
-                                class="form-control" placeholder="Contoh: Muhammad Budi Santoso">
+                                class="form-control" placeholder="Masukkan nama mahasiswa terlapor">
                         </div>
                         <small class="text-muted mt-1 d-block">Ketik nama lengkap mahasiswa yang Anda laporkan.</small>
                     </div>
@@ -402,7 +402,7 @@
                         <div class="modern-input-group">
                             <i class="fas fa-id-card input-icon"></i>
                             <input type="text" name="reported_nim" value="{{ old('reported_nim') }}" required 
-                                class="form-control" placeholder="Contoh: 2024002">
+                                class="form-control" placeholder="Masukkan NIM terlapor">
                         </div>
                         <small class="text-muted mt-1 d-block">Nomor Induk Mahasiswa pihak terlapor jika diketahui.</small>
                     </div>

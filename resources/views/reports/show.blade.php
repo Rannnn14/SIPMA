@@ -478,7 +478,6 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <input type="hidden" name="points" value="0">
                         </div>
 
                         <div class="form-group mb-3">

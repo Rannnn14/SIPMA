@@ -482,10 +482,13 @@ class ReportController extends Controller
         $evidenceName = $firstEvidence?->getClientOriginalName();
         $evidencePath = $storedEvidence[0] ?? null;
 
-        // Nomor laporan berurutan dimulai dari 1 (misal: REP-202611-001)
-        $latestReport = ViolationReport::orderBy('id', 'desc')->first();
-        $nextNumber = $latestReport ? ($latestReport->id + 1) : 1;
-        $reportNumber = 'REP-' . date('Ym') . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        $academicYear = \App\Models\AcademicYear::getActiveYear();
+        preg_match('/^(\d{4})\/(\d{4})$/', $academicYear, $yearParts);
+        $yearCode = isset($yearParts[1], $yearParts[2])
+            ? substr($yearParts[1], -2) . substr($yearParts[2], -2)
+            : preg_replace('/\D/', '', $academicYear);
+        $nextNumber = ViolationReport::where('academic_year', $academicYear)->count() + 1;
+        $reportNumber = 'REP-' . $yearCode . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
 
         $report = ViolationReport::create([
             'report_number'     => $reportNumber,
@@ -496,14 +499,13 @@ class ReportController extends Controller
             'reported_department' => $request->reported_department,
             'target_department' => $request->reported_department,
             'reporter_id'       => Auth::id(),
-            'points'            => 0, // Sistem poin telah ditiadakan sesuai ketentuan kampus
             'severity'          => $request->severity,
             'incident_date'     => $request->incident_date,
             'incident_time'     => $request->incident_time,
             'incident_location' => $request->incident_location,
             'chronology'        => $request->chronology,
             'status'            => 'pending',
-            'academic_year'     => \App\Models\AcademicYear::getActiveYear(),
+            'academic_year'     => $academicYear,
             'semester'          => 'Ganjil',
             'reported_semester' => $request->reported_semester, // Semester berupa angka
             'evidence_path'     => $evidencePath,
@@ -656,7 +658,6 @@ class ReportController extends Controller
             'reported_nim' => 'required|string|max:50',
             'reported_department' => ['required', 'string', Rule::in(array_keys(self::departmentFacultyMap()))],
             'severity' => ['required', 'string', Rule::in(self::$severities)],
-            'points' => 'nullable|integer|min:0',
             'incident_location' => 'required|string|max:255',
             'chronology' => 'nullable|string',
         ]);
@@ -670,7 +671,6 @@ class ReportController extends Controller
             'reported_department' => $data['reported_department'],
             'target_department' => $data['reported_department'],
             'severity' => $data['severity'],
-            'points' => 0, // Sistem poin telah ditiadakan
             'incident_location' => trim($data['incident_location']),
             'chronology' => isset($data['chronology']) ? trim($data['chronology']) : null,
             'student_id' => $matchedStudent?->id ?? $report->student_id,
@@ -691,7 +691,6 @@ class ReportController extends Controller
 
         $request->validate([
             'target_department' => 'nullable|string|max:150',
-            'points' => 'nullable|integer|min:0',
         ]);
 
         $targetDept = $request->input('target_department') ?: ($report->reported_department ?: $report->target_department);
@@ -699,7 +698,6 @@ class ReportController extends Controller
         $report->update([
             'status' => 'dikonfirmasi', // Terkonfirmasi & diteruskan ke Kajur
             'target_department' => $targetDept,
-            'points' => 0,
             'rejection_reason' => null,
             'verified_by' => $user->id,
             'verified_at' => now(),

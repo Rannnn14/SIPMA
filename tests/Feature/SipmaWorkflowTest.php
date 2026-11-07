@@ -5,6 +5,10 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\ViolationReport;
+use App\Models\Student;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Database\Seeders\DatabaseSeeder;
 
@@ -16,21 +20,59 @@ class SipmaWorkflowTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+        $this->createTestFixtures();
     }
 
-    public function test_login_with_nim_and_redirects_to_mahasiswa_dashboard(): void
+    private function createTestFixtures(): void
     {
-        // Login using NIM
-        $response = $this->post(route('login'), [
-            'login' => '2024001',
-            'password' => 'password',
+        $now = Carbon::now();
+        $student = Student::create([
+            'nim' => 'TEST0001',
+            'name' => 'Mahasiswa Test',
+            'study_program' => 'Informatika',
+            'entry_year' => 2024,
         ]);
 
-        $response->assertRedirect(route('mahasiswa.dashboard'));
-        $this->assertAuthenticated();
+        $mahasiswaId = DB::table('users')->insertGetId([
+            'name' => 'Mahasiswa Test', 'email' => 'student@test.invalid',
+            'nim' => 'TEST0001', 'username' => 'TEST0001',
+            'password' => Hash::make('password'), 'role' => 'mahasiswa',
+            'department' => 'Informatika', 'faculty' => 'FITK',
+            'student_id' => $student->id, 'created_at' => $now, 'updated_at' => $now,
+        ]);
 
-        $dashboard = $this->get(route('mahasiswa.dashboard'));
-        $dashboard->assertStatus(200);
+        foreach ([
+            ['Admin Test', 'kemahasiswaan@test.invalid', 'kemahasiswaan', 'kemahasiswaan', null],
+            ['Kajur Test', 'kajur@sipma.test', 'kajur_if', 'kajur', 'Informatika'],
+            ['Dekan Test', 'dekan@test.invalid', 'dekan', 'dekan', null],
+            ['Warek Test', 'warek@test.invalid', 'warek', 'warek', null],
+        ] as [$name, $email, $username, $role, $department]) {
+            DB::table('users')->insert([
+                'name' => $name, 'email' => $email, 'username' => $username,
+                'password' => Hash::make('password'), 'role' => $role,
+                'department' => $department, 'faculty' => null, 'student_id' => null,
+                'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
+
+        $pendingTypeId = DB::table('violation_types')->value('id');
+        DB::table('violation_reports')->insert([
+            'report_number' => 'TEST-REPORT-001', 'student_id' => null,
+            'reported_name' => 'Mahasiswa Terlapor Test', 'reported_nim' => 'TEST0002',
+            'reported_faculty' => 'FITK', 'reported_department' => 'Informatika',
+            'target_department' => 'Informatika', 'violation_type_id' => $pendingTypeId,
+            'reporter_id' => $mahasiswaId, 'severity' => 'Berat',
+            'incident_date' => $now->toDateString(), 'incident_time' => '10:30',
+            'incident_location' => 'Lokasi Test', 'chronology' => 'Laporan fixture untuk pengujian alur.',
+            'status' => 'pending', 'academic_year' => '2026/2027', 'semester' => 'Ganjil',
+            'created_at' => $now, 'updated_at' => $now,
+        ]);
+    }
+
+    public function test_local_mahasiswa_demo_account_is_not_seeded(): void
+    {
+        $this->assertDatabaseMissing('users', ['email' => 'mahasiswa@sipma.test']);
+        $this->assertDatabaseCount('students', 1);
     }
 
     public function test_login_with_username_and_redirects_to_kemahasiswaan_dashboard(): void
@@ -99,19 +141,19 @@ class SipmaWorkflowTest extends TestCase
         $this->actingAs($mahasiswa);
 
         $response = $this->post(route('reports.store'), [
-            'reported_name' => 'Doni Kusuma',
-            'reported_nim' => '2024004',
-            'reported_department' => 'Teknik Elektro',
+            'reported_name' => 'Mahasiswa Terlapor Test',
+            'reported_nim' => 'TEST0002',
+            'reported_department' => 'Informatika',
             'incident_date' => '2026-10-15',
             'incident_time' => '09:00',
-            'incident_location' => 'Laboratorium Listrik',
+            'incident_location' => 'Lokasi Test',
             'severity' => 'Sedang',
-            'chronology' => 'Mahasiswa merusak fasilitas kabel praktikum saat asistensi.',
+            'chronology' => 'Laporan uji untuk memeriksa alur pengiriman.',
         ]);
 
         $response->assertRedirect(route('mahasiswa.dashboard'));
         $this->assertDatabaseHas('violation_reports', [
-            'reported_name' => 'Doni Kusuma',
+            'reported_name' => 'Mahasiswa Terlapor Test',
             'status' => 'pending',
             'severity' => 'Sedang',
         ]);
@@ -141,11 +183,10 @@ class SipmaWorkflowTest extends TestCase
 
         // Koreksi
         $koreksiResponse = $this->post(route('reports.koreksi', $report->id), [
-            'reported_name' => 'Budi Santoso Dikoreksi',
-            'reported_nim' => '2024002',
-            'reported_department' => 'Teknik Informatika',
+            'reported_name' => 'Mahasiswa Terlapor Test Dikoreksi',
+            'reported_nim' => 'TEST0002',
+            'reported_department' => 'Informatika',
             'severity' => 'Berat',
-            'points' => 75,
             'incident_location' => 'Laboratorium Komputer 3, Gedung B',
             'chronology' => $report->chronology,
         ]);
@@ -153,42 +194,40 @@ class SipmaWorkflowTest extends TestCase
 
         // Approve and forward to Kajur
         $approveResponse = $this->post(route('reports.approve', $report->id), [
-            'target_department' => 'Teknik Informatika',
-            'points' => 75,
+            'target_department' => 'Informatika',
         ]);
         $approveResponse->assertSessionHas('success');
 
         $this->assertDatabaseHas('violation_reports', [
             'id' => $report->id,
             'status' => 'dikonfirmasi',
-            'target_department' => 'Teknik Informatika',
+            'target_department' => 'Informatika',
         ]);
     }
 
     public function test_kajur_can_process_and_resolve_case(): void
     {
-        $kajur = User::where('role', 'kajur')->where('department', 'Teknik Informatika')->first();
+        $kajur = User::where('role', 'kajur')->where('department', 'Informatika')->first();
         $this->actingAs($kajur);
 
-        // Find a report in Teknik Informatika
-        $report = ViolationReport::where('target_department', 'Teknik Informatika')
+        // Find a report in Informatika
+        $report = ViolationReport::where('target_department', 'Informatika')
             ->whereIn('status', ['dikonfirmasi', 'diproses'])
             ->first();
 
-        if ($report) {
-            $response = $this->post(route('reports.tindakLanjut', $report->id), [
-                'status' => 'selesai',
-                'sanction_type' => 'Surat Peringatan (SP 1)',
-                'kajur_notes' => 'Telah dilakukan pemanggilan dan sidang etika jurusan.',
-            ]);
+        $this->assertNotNull($report);
+        $response = $this->post(route('reports.tindakLanjut', $report->id), [
+            'status' => 'selesai',
+            'sanction_type' => 'Surat Peringatan (SP 1)',
+            'kajur_notes' => 'Telah dilakukan pemanggilan dan sidang etika jurusan.',
+        ]);
 
-            $response->assertSessionHas('success');
-            $this->assertDatabaseHas('violation_reports', [
-                'id' => $report->id,
-                'status' => 'selesai',
-                'sanction_type' => 'Surat Peringatan (SP 1)',
-            ]);
-        }
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('violation_reports', [
+            'id' => $report->id,
+            'status' => 'selesai',
+            'sanction_type' => 'Surat Peringatan (SP 1)',
+        ]);
     }
 
     public function test_export_endpoints(): void

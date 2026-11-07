@@ -8,7 +8,7 @@
                 </div>
                 <h2 class="font-weight-bold mb-2 text-white">Dashboard Penanganan Kasus</h2>
                 <p class="text-white-50 mb-3" style="max-width: 720px;">
-                    Penanganan eskalasi pelanggaran berat (≥100 poin) dan pemberian sanksi resmi kampus.
+                    Penanganan laporan pelanggaran dan pemberian sanksi resmi kampus.
                 </p>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('reports.index') }}" class="btn btn-purple btn-sm font-weight-bold text-white px-3 rounded-pill" style="background:#7c3aed;">

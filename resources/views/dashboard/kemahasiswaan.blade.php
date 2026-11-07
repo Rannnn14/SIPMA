@@ -695,8 +695,16 @@
                                 </table>
                             </div>
                             @if($reports->count() > 10)
-                                <div class="px-3 py-2 border-top small text-muted">Menampilkan 10 dari {{ $reports->count() }} laporan. Gulir untuk melihat data lainnya.</div>
+                                <div class="px-3 py-2 border-top small text-muted">Menampilkan 10 dari {{ $reports->count() }} laporan.</div>
                             @endif
+                            <div class="px-3 py-3 border-top d-flex flex-wrap justify-content-end" style="gap: 8px;">
+                                <a href="{{ route('reports.history') }}" class="btn btn-sm btn-outline-primary font-weight-bold">
+                                    <i class="fas fa-history mr-1"></i> Lihat Riwayat
+                                </a>
+                                <a href="{{ route('reports.inbox') }}" class="btn btn-sm btn-primary font-weight-bold">
+                                    <i class="fas fa-inbox mr-1"></i> Buka Inbox Verifikasi
+                                </a>
+                            </div>
                         </div>
 
                     </div>
