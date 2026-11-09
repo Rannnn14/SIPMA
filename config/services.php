@@ -44,6 +44,7 @@ return [
     */
     'bridge_api' => [
         'url'     => env('BRIDGE_API_URL', 'https://bridge.uinssc.ac.id'),
+        'token'   => env('BRIDGE_API_TOKEN', null),
         'timeout' => env('BRIDGE_API_TIMEOUT', 5),
     ],
 

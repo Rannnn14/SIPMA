@@ -27,3 +27,6 @@ Artisan::command('reports:purge-rejected', function () {
 
 Schedule::useCache('file');
 Schedule::command('reports:purge-rejected')->hourly();
+
+// Sinkronisasi otomatis data mahasiswa dari Bridge API di latar belakang setiap hari jam 02:00 dini hari
+Schedule::command('students:sync')->dailyAt('02:00');

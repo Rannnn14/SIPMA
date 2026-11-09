@@ -243,6 +243,7 @@
                         <div class="form-row align-items-center">
                             <div class="col-sm-8 mb-2 mb-sm-0">
                                 <input type="text" name="year" class="form-control" placeholder="Contoh: {{ $suggestedNextYear }}" value="{{ old('year', $suggestedNextYear) }}" required pattern="\d{4}/\d{4}" title="Format YYYY/YYYY">
+                                <select name="semester" class="form-control mt-2" required><option value="Gasal">Gasal</option><option value="Genap">Genap</option></select>
                             </div>
                             <div class="col-sm-4">
                                 <button type="submit" class="btn btn-teal-primary btn-block"><i class="fas fa-plus-circle mr-1"></i>Tambah & Aktifkan</button>
@@ -259,7 +260,8 @@
                                         <td class="align-middle">
                                             <form method="POST" action="{{ route('kemahasiswaan.academic-years.update', $ay) }}" class="d-flex align-items-center" style="gap:8px;">
                                                 @csrf @method('PUT')
-                                                <input name="year" value="{{ $ay->year }}" class="form-control form-control-sm" required pattern="\\d{4}/\\d{4}" title="Format YYYY/YYYY" style="max-width:150px;">
+                                                <input type="text" name="year" value="{{ $ay->year_only }}" class="form-control form-control-sm" required pattern="[0-9]{4}/[0-9]{4}" title="Format YYYY/YYYY" style="max-width:150px;" autocomplete="off">
+                                                <select name="semester" class="form-control form-control-sm" required style="max-width:100px;"><option value="Gasal" {{ $ay->semester_name === 'Gasal' ? 'selected' : '' }}>Gasal</option><option value="Genap" {{ $ay->semester_name === 'Genap' ? 'selected' : '' }}>Genap</option></select>
                                                 <button class="btn btn-sm btn-outline-primary" title="Simpan perubahan"><i class="fas fa-save"></i></button>
                                             </form>
                                         </td>

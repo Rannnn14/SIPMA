@@ -3,13 +3,21 @@
 
     <style>
         .accounts-table-scroll {
-            max-height: min(68vh, 720px);
-            overflow: auto;
+            max-height: min(72vh, 760px);
+            overflow-x: auto;
+            overflow-y: auto;
             border: 1px solid #e2e8f0;
-            border-radius: 12px;
+            border-radius: 14px;
             scrollbar-gutter: stable;
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
+            background: #fff;
+        }
+        .accounts-table-scroll table {
+            min-width: 980px;
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0;
         }
         .accounts-table-scroll thead th {
             position: sticky;
@@ -18,8 +26,22 @@
             background: #f8fafc;
             box-shadow: 0 1px 0 #e2e8f0;
             white-space: nowrap;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            color: #475569;
+            padding: 14px 16px;
+            border-top: none;
         }
-        .accounts-table-scroll tbody td { vertical-align: middle; }
+        .accounts-table-scroll tbody td {
+            vertical-align: middle;
+            padding: 12px 16px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .accounts-table-scroll tbody tr:hover td {
+            background-color: #f8fafc;
+        }
         .account-actions { min-width: 90px; }
         .account-form-body { max-height: 68vh; overflow-y: auto; }
         .password-reset-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; }
@@ -89,23 +111,65 @@
             </div>
             <div class="accounts-table-scroll">
                 <table class="table table-hover align-middle">
-                    <thead class="thead-light"><tr><th>Nama</th><th>Jabatan</th><th>Fakultas / Jurusan</th><th>Username</th><th>Email</th><th class="text-right">Aksi</th></tr></thead>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 17%; min-width: 150px;">Nama</th>
+                            <th style="width: 16%; min-width: 140px;">Jabatan</th>
+                            <th style="width: 28%; min-width: 230px;">Fakultas / Jurusan</th>
+                            <th style="width: 14%; min-width: 120px;">Username</th>
+                            <th style="width: 17%; min-width: 160px;">Email</th>
+                            <th class="text-right" style="width: 8%; min-width: 85px;">Aksi</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         @forelse ($accounts as $account)
                             <tr>
-                                <td class="font-weight-bold">{{ $account->name ?: 'Belum diisi' }}</td>
-                                <td>{{ ['kajur' => 'Ketua Jurusan', 'wadek3' => 'Wakil Dekan III', 'warek' => 'Wakil Rektor III'][$account->role] ?? $account->role }}</td>
-                                <td>
-                                    @if ($account->department)
-                                        <div class="font-weight-bold">{{ $account->department }}</div>
-                                        <small class="text-muted">{{ \App\Http\Controllers\ReportController::facultyDisplayName($account->faculty) }}</small>
+                                <td style="white-space: nowrap;">
+                                    @if ($account->name)
+                                        <span class="font-weight-bold text-dark">{{ $account->name }}</span>
                                     @else
-                                        {{ $account->faculty ? \App\Http\Controllers\ReportController::facultyDisplayName($account->faculty) : 'Universitas' }}
+                                        <span class="badge badge-light border text-muted px-2 py-1" style="font-weight: 500; font-size: 0.82rem;">
+                                            <i class="fas fa-user-edit mr-1 text-black-50"></i>Belum diisi
+                                        </span>
                                     @endif
                                 </td>
-                                <td><code>{{ $account->username }}</code></td>
-                                <td>{{ $account->email }}</td>
-                                <td class="text-right text-nowrap account-actions">
+                                <td style="white-space: nowrap;">
+                                    @if ($account->role === 'kajur')
+                                        <span class="badge px-2 py-1" style="background:#e0f2fe; color:#0369a1; font-weight:600; font-size:0.82rem;">
+                                            <i class="fas fa-graduation-cap mr-1"></i>Ketua Jurusan
+                                        </span>
+                                    @elseif ($account->role === 'wadek3')
+                                        <span class="badge px-2 py-1" style="background:#fef3c7; color:#b45309; font-weight:600; font-size:0.82rem;">
+                                            <i class="fas fa-user-tie mr-1"></i>Wakil Dekan III
+                                        </span>
+                                    @elseif ($account->role === 'warek')
+                                        <span class="badge px-2 py-1" style="background:#ede9fe; color:#6d28d9; font-weight:600; font-size:0.82rem;">
+                                            <i class="fas fa-university mr-1"></i>Wakil Rektor III
+                                        </span>
+                                    @else
+                                        <span class="badge badge-secondary px-2 py-1">{{ ucfirst($account->role) }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($account->department)
+                                        <div class="font-weight-bold text-dark mb-1" style="font-size: 0.9rem; line-height: 1.35;">{{ $account->department }}</div>
+                                        <span class="badge badge-light border text-secondary px-2 py-0" style="font-size: 0.75rem; font-weight: 600;">
+                                            {{ \App\Http\Controllers\ReportController::facultyDisplayName($account->faculty) }}
+                                        </span>
+                                    @else
+                                        <div class="font-weight-bold text-dark mb-1" style="font-size: 0.9rem;">
+                                            {{ $account->faculty ? \App\Http\Controllers\ReportController::facultyDisplayName($account->faculty) : 'UIN Siber Syekh Nurjati Cirebon' }}
+                                        </div>
+                                        <small class="text-muted">{{ $account->faculty ?: 'Universitas' }}</small>
+                                    @endif
+                                </td>
+                                <td style="white-space: nowrap;">
+                                    <code class="font-weight-bold px-2 py-1 rounded" style="background: #f1f5f9; color: #0d9488; font-size: 0.86rem; border: 1px solid #e2e8f0;">{{ $account->username }}</code>
+                                </td>
+                                <td style="white-space: nowrap;">
+                                    <span class="text-muted small" style="font-weight: 500;"><i class="far fa-envelope mr-1 text-black-50"></i>{{ $account->email }}</span>
+                                </td>
+                                <td class="text-right text-nowrap account-actions" style="white-space: nowrap;">
                                     <button type="button" class="btn btn-sm btn-outline-primary edit-account" data-toggle="modal" data-target="#editAccountModal"
                                         data-id="{{ $account->id }}" data-name="{{ $account->name }}" data-email="{{ $account->email }}" data-username="{{ $account->username }}" data-role="{{ $account->role }}" data-faculty="{{ $account->faculty }}" data-department="{{ $account->department }}" title="Edit akun" aria-label="Edit akun"><i class="fas fa-pencil-alt"></i></button>
                                     <form method="POST" action="{{ route('kemahasiswaan.accounts.destroy', $account) }}" class="d-inline" onsubmit="return confirm('Hapus akun {{ addslashes($account->username) }}? Akun tidak bisa login lagi, tetapi riwayat laporan akan tetap tersimpan.');">
@@ -174,7 +238,7 @@
                         <h6 class="font-weight-bold text-gray-800 mb-1">Penempatan</h6>
                         <p class="small text-muted mb-3">Fakultas dan jurusan baru akan langsung tersedia di formulir laporan dan rekap.</p>
                         <div class="form-row">
-                            <div class="form-group col-md-6 account-faculty d-none" data-scope="create"><label>Fakultas <span class="text-danger">*</span></label><select name="faculty" class="form-control account-faculty-select" data-scope="create"><option value="">Pilih fakultas</option>@foreach ($faculties as $faculty)<option value="{{ $faculty->name }}" @selected(old('faculty') === $faculty->name)>{{ \App\Http\Controllers\ReportController::facultyDisplayName($faculty->name) }}</option>@endforeach<option value="__new__" data-for-role="wadek3" @selected(old('faculty') === '__new__')>+ Tambah fakultas baru</option></select></div>
+                            <div class="form-group col-md-6 account-faculty d-none" data-scope="create"><label>Fakultas <span class="text-danger">*</span></label><select name="faculty" class="form-control account-faculty-select" data-scope="create"><option value="">Pilih fakultas</option>@foreach ($faculties as $faculty)<option value="{{ $faculty->name }}" @selected(old('faculty') === $faculty->name)>{{ $faculty->name }}</option>@endforeach<option value="__new__" data-for-role="wadek3" @selected(old('faculty') === '__new__')>+ Tambah fakultas baru</option></select></div>
                             <div class="form-group col-md-6 account-new-faculty d-none" data-scope="create"><label>Nama fakultas baru</label><input name="new_faculty" value="{{ old('new_faculty') }}" class="form-control" maxlength="150" placeholder="Masukkan nama fakultas"></div>
                             <div class="form-group col-md-6 account-department d-none" data-scope="create"><label>Jurusan / Program Studi <span class="text-danger">*</span></label><select name="department" class="form-control account-department-select" data-scope="create"><option value="">Pilih jurusan</option>@foreach ($departments as $department)<option value="{{ $department->name }}" data-faculty="{{ $department->faculty->name }}" @selected(old('department') === $department->name)>{{ $department->name }} — {{ \App\Http\Controllers\ReportController::facultyDisplayName($department->faculty->name) }}</option>@endforeach<option value="__new__" @selected(old('department') === '__new__')>+ Tambah jurusan baru</option></select></div>
                             <div class="form-group col-md-6 account-new-department d-none" data-scope="create"><label>Nama jurusan baru</label><input name="new_department" value="{{ old('new_department') }}" class="form-control" maxlength="150" placeholder="Masukkan nama jurusan"></div>
@@ -215,7 +279,7 @@
                         <h6 class="font-weight-bold text-gray-800 mb-1">Penempatan</h6>
                         <p class="small text-muted mb-3">Pilih fakultas dan jurusan yang sesuai dengan jabatan akun.</p>
                         <div class="form-row">
-                            <div class="form-group col-md-6 account-faculty d-none" data-scope="edit"><label>Fakultas <span class="text-danger">*</span></label><select name="faculty" id="editFaculty" class="form-control account-faculty-select" data-scope="edit"><option value="">Pilih fakultas</option>@foreach ($faculties as $faculty)<option value="{{ $faculty->name }}">{{ \App\Http\Controllers\ReportController::facultyDisplayName($faculty->name) }}</option>@endforeach<option value="__new__" data-for-role="wadek3">+ Tambah fakultas baru</option></select></div>
+                            <div class="form-group col-md-6 account-faculty d-none" data-scope="edit"><label>Fakultas <span class="text-danger">*</span></label><select name="faculty" id="editFaculty" class="form-control account-faculty-select" data-scope="edit"><option value="">Pilih fakultas</option>@foreach ($faculties as $faculty)<option value="{{ $faculty->name }}">{{ $faculty->name }}</option>@endforeach<option value="__new__" data-for-role="wadek3">+ Tambah fakultas baru</option></select></div>
                             <div class="form-group col-md-6 account-new-faculty d-none" data-scope="edit"><label>Nama fakultas baru</label><input name="new_faculty" id="editNewFaculty" class="form-control" maxlength="150" placeholder="Masukkan nama fakultas"></div>
                             <div class="form-group col-md-6 account-department d-none" data-scope="edit"><label>Jurusan / Program Studi <span class="text-danger">*</span></label><select name="department" id="editDepartment" class="form-control account-department-select" data-scope="edit"><option value="">Pilih jurusan</option>@foreach ($departments as $department)<option value="{{ $department->name }}" data-faculty="{{ $department->faculty->name }}">{{ $department->name }} — {{ \App\Http\Controllers\ReportController::facultyDisplayName($department->faculty->name) }}</option>@endforeach<option value="__new__">+ Tambah jurusan baru</option></select></div>
                             <div class="form-group col-md-6 account-new-department d-none" data-scope="edit"><label>Nama jurusan baru</label><input name="new_department" id="editNewDepartment" class="form-control" maxlength="150" placeholder="Masukkan nama jurusan"></div>

@@ -155,7 +155,7 @@
                 </h6>
             </div>
             <div class="d-flex align-items-center" style="gap: 10px;">
-                <a href="{{ route('reports.export.excel') }}" class="btn btn-sm font-weight-bold p-2 text-white d-inline-flex align-items-center justify-content-center" style="background: #059669; border-radius: 8px; font-size: 0.95rem; min-width: 40px; min-height: 40px;" title="Export Excel" aria-label="Export Excel">
+                <a href="{{ route('reports.export.excel', ['academic_year' => $selectedAcademicYear]) }}" class="btn btn-sm font-weight-bold p-2 text-white d-inline-flex align-items-center justify-content-center" style="background: #059669; border-radius: 8px; font-size: 0.95rem; min-width: 40px; min-height: 40px;" title="Export Excel" aria-label="Export Excel">
                     <i class="fas fa-file-excel" aria-hidden="true"></i>
                 </a>
                 <span class="badge badge-success px-3 py-1.5 font-weight-bold" style="background:#ecfdf5; color:#059669; border: 1px solid #d1fae5; border-radius: 20px; font-size: 0.8rem;">
@@ -280,4 +280,6 @@
         })();
     </script>
 </x-layout>
+
+
 

@@ -385,26 +385,35 @@
                 </div>
 
                 <div class="row">
-                    <!-- Nama Terlapor -->
+                    <!-- NIM Terlapor (Input Utama untuk Auto-Lookup) -->
+                    <div class="col-md-6 mb-4">
+                        <label class="font-weight-bold text-dark small mb-2 d-flex justify-content-between align-items-center">
+                            <span>NIM Mahasiswa Terlapor <span class="text-danger">*</span></span>
+                            <span id="nimLookupBadge" class="badge badge-light border text-muted px-2 py-1" style="display: none; font-size: 0.75rem;"></span>
+                        </label>
+                        <div class="modern-input-group position-relative">
+                            <i class="fas fa-id-card input-icon"></i>
+                            <input type="text" name="reported_nim" id="reportedNimInput" value="{{ old('reported_nim') }}" required 
+                                class="form-control" style="padding-right: 85px;" placeholder="Masukkan NIM terlapor" autocomplete="off">
+                            <button type="button" id="btnSearchNim" class="btn btn-sm btn-outline-primary" 
+                                style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border-radius: 8px; font-weight: 600; padding: 4px 12px; font-size: 0.8rem; z-index: 5;">
+                                <i class="fas fa-search mr-1" id="btnSearchNimIcon"></i> <span id="btnSearchNimText">Cari</span>
+                            </button>
+                        </div>
+                        <small class="text-muted mt-1 d-block" id="nimHelperText">
+                            Ketik NIM pihak terlapor (nama akan terisi otomatis).
+                        </small>
+                    </div>
+
+                    <!-- Nama Terlapor (Otomatis Terisi dari NIM / API) -->
                     <div class="col-md-6 mb-4">
                         <label class="font-weight-bold text-dark small mb-2">Nama Lengkap Terlapor <span class="text-danger">*</span></label>
                         <div class="modern-input-group">
                             <i class="fas fa-user input-icon"></i>
-                            <input type="text" name="reported_name" value="{{ old('reported_name') }}" required 
+                            <input type="text" name="reported_name" id="reportedNameInput" value="{{ old('reported_name') }}" required 
                                 class="form-control" placeholder="Masukkan nama mahasiswa terlapor">
                         </div>
-                        <small class="text-muted mt-1 d-block">Ketik nama lengkap mahasiswa yang Anda laporkan.</small>
-                    </div>
-
-                    <!-- NIM Terlapor -->
-                    <div class="col-md-6 mb-4">
-                        <label class="font-weight-bold text-dark small mb-2">NIM Mahasiswa Terlapor <span class="text-danger">*</span></label>
-                        <div class="modern-input-group">
-                            <i class="fas fa-id-card input-icon"></i>
-                            <input type="text" name="reported_nim" value="{{ old('reported_nim') }}" required 
-                                class="form-control" placeholder="Masukkan NIM terlapor">
-                        </div>
-                        <small class="text-muted mt-1 d-block">Nomor Induk Mahasiswa pihak terlapor jika diketahui.</small>
+                        <small class="text-muted mt-1 d-block" id="nameHelperText">Terisi otomatis saat mencari NIM, atau ketik manual.</small>
                     </div>
 
                     <!-- Fakultas Terlapor (Baru) -->
@@ -416,7 +425,7 @@
                                 <option value="">-- Pilih Fakultas --</option>
                                 @foreach($faculties as $facName => $deptList)
                                     <option value="{{ $facName }}" {{ old('reported_faculty') === $facName ? 'selected' : '' }}>
-                                        {{ \App\Http\Controllers\ReportController::facultyDisplayName($facName) }}
+                                        {{ $facName }}
                                     </option>
                                 @endforeach
                             </select>
@@ -608,7 +617,7 @@
                     <label class="font-weight-bold text-dark small mb-2">Unggah Berkas Bukti Pendukung <span class="text-danger">*</span></label>
                     
                     <div class="dropzone-box" onclick="document.getElementById('evidenceFile').click()">
-                        <input type="file" name="evidence[]" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4" multiple required style="display: none;">
+                        <input type="file" name="evidence[]" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,.m4v,.webm,.3gp" multiple required style="display: none;">
                         <div class="mb-2">
                             <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto text-primary" style="width: 52px; height: 52px; background: #f0fdfa;">
                                 <i class="fas fa-cloud-upload-alt fa-2x"></i>
@@ -618,7 +627,7 @@
                             Klik di sini untuk memilih 1–4 berkas bukti
                         </h6>
                         <p class="text-muted small mb-2" id="fileSubDisplay">
-                            Format: <strong>PDF, JPG, PNG, atau MP4</strong> · Maksimal <strong>4 file</strong>, masing-masing 10 MB
+                            Format: <strong>PDF, JPG, PNG, MP4, MOV, M4V, WEBM, atau 3GP</strong> · Dokumen/foto maks. 10 MB, video maks. 50 MB
                         </p>
                         <div id="selectedEvidenceFiles" class="d-flex flex-column align-items-center w-100 mb-2"></div>
                         <div class="d-flex justify-content-center flex-wrap">
@@ -777,7 +786,7 @@
                     addFileButton.style.display = selectedFiles.length > 0 && selectedFiles.length < 4 ? 'inline-block' : 'none';
                     fileSubDisplay.innerHTML = selectedFiles.length
                         ? 'Total ukuran: <strong>' + (selectedFiles.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024)).toFixed(2) + ' MB</strong>'
-                        : 'Format: <strong>PDF, JPG, PNG, atau MP4</strong> · Maksimal <strong>4 file</strong>, masing-masing 10 MB';
+                        : 'Format: <strong>PDF, JPG, PNG, MP4, MOV, M4V, WEBM, atau 3GP</strong> · Dokumen/foto maks. 10 MB, video maks. 50 MB';
                     selectedFiles.forEach((file, index) => {
                         const row = document.createElement('div');
                         row.className = 'd-flex align-items-center justify-content-between bg-white border rounded px-2 py-1 mb-1';
@@ -801,20 +810,243 @@
                         selectedFilesDisplay.appendChild(row);
                     });
                 };
-                fileInput.addEventListener('change', () => {
+                    const compressImage = (file) => new Promise((resolve) => {
+                        if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                            resolve(file);
+                            return;
+                        }
+
+                        const imageUrl = URL.createObjectURL(file);
+                        const image = new Image();
+                        image.onload = () => {
+                            const maxDimension = 2000;
+                            const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+                            const canvas = document.createElement('canvas');
+                            canvas.width = Math.max(1, Math.round(image.width * scale));
+                            canvas.height = Math.max(1, Math.round(image.height * scale));
+                            const context = canvas.getContext('2d');
+                            if (!context) {
+                                URL.revokeObjectURL(imageUrl);
+                                resolve(file);
+                                return;
+                            }
+
+                            // JPEG lebih kecil; PNG tetap PNG agar transparansi tidak hilang.
+                            const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                            canvas.toBlob((blob) => {
+                                URL.revokeObjectURL(imageUrl);
+                                if (!blob || blob.size >= file.size) {
+                                    resolve(file);
+                                    return;
+                                }
+
+                                const extension = outputType === 'image/png' ? 'png' : 'jpg';
+                                const baseName = file.name.replace(/\.[^.]+$/, '');
+                                resolve(new File([blob], baseName + '.' + extension, {
+                                    type: outputType,
+                                    lastModified: Date.now()
+                                }));
+                            }, outputType, outputType === 'image/jpeg' ? 0.82 : undefined);
+                        };
+                        image.onerror = () => {
+                            URL.revokeObjectURL(imageUrl);
+                            resolve(file);
+                        };
+                        image.src = imageUrl;
+                    });
+
+                    fileInput.addEventListener('change', async () => {
                     const newlySelected = Array.from(fileInput.files);
                     if (selectedFiles.length + newlySelected.length > 4) {
                         alert('Maksimal 4 berkas bukti yang dapat dipilih.');
                         renderSelectedFiles();
                         return;
                     }
-                    selectedFiles = selectedFiles.concat(newlySelected);
+                        fileSubDisplay.innerHTML = 'Mengoptimalkan gambar...';
+                        const optimizedFiles = await Promise.all(newlySelected.map(compressImage));
+                        const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'mp4', 'mov', 'm4v', 'webm', '3gp'];
+                        const invalidFile = optimizedFiles.find((file) => {
+                            const extension = file.name.split('.').pop().toLowerCase();
+                            const isVideo = ['mp4', 'mov', 'm4v', 'webm', '3gp'].includes(extension);
+                            return !allowedExtensions.includes(extension) || file.size > (isVideo ? 50 : 10) * 1024 * 1024;
+                        });
+                        if (invalidFile) {
+                            const extension = invalidFile.name.split('.').pop().toLowerCase();
+                            const isVideo = ['mp4', 'mov', 'm4v', 'webm', '3gp'].includes(extension);
+                            alert(isVideo
+                                ? 'Format video harus MP4, MOV, M4V, WEBM, atau 3GP dan ukuran maksimal 50 MB.'
+                                : 'Dokumen atau foto harus PDF, JPG, atau PNG dan ukuran maksimal 10 MB.');
+                            renderSelectedFiles();
+                            return;
+                        }
+                        selectedFiles = selectedFiles.concat(optimizedFiles);
                     renderSelectedFiles();
                 });
                 const reportForm = fileInput.closest('form');
                 reportForm?.addEventListener('reset', () => {
                     selectedFiles = [];
                     window.setTimeout(renderSelectedFiles, 0);
+                });
+            }
+
+            // 4. Auto-Lookup Mahasiswa Berdasarkan NIM (Bridge API & Database)
+            const nimInput = document.getElementById('reportedNimInput');
+            const nameInput = document.getElementById('reportedNameInput');
+            const btnSearchNim = document.getElementById('btnSearchNim');
+            const btnSearchIcon = document.getElementById('btnSearchNimIcon');
+            const btnSearchText = document.getElementById('btnSearchNimText');
+            const nimBadge = document.getElementById('nimLookupBadge');
+            const nimHelper = document.getElementById('nimHelperText');
+
+            let debounceTimer = null;
+            let lastSearchedNim = '';
+
+            function performNimLookup(force = false) {
+                if (!nimInput || !nameInput) return;
+
+                const nim = nimInput.value.trim();
+                if (!nim || nim.length < 3) {
+                    if (nimBadge) nimBadge.style.display = 'none';
+                    if (nimHelper) nimHelper.innerHTML = 'Ketik NIM pihak terlapor (nama akan terisi otomatis).';
+                    return;
+                }
+
+                if (!force && nim === lastSearchedNim) {
+                    return;
+                }
+
+                lastSearchedNim = nim;
+
+                if (btnSearchIcon) btnSearchIcon.className = 'fas fa-spinner fa-spin mr-1';
+                if (btnSearchText) btnSearchText.textContent = 'Mencari...';
+                if (btnSearchNim) btnSearchNim.disabled = true;
+                if (nimBadge) {
+                    nimBadge.style.display = 'inline-block';
+                    nimBadge.className = 'badge badge-info text-white px-2 py-1';
+                    nimBadge.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-1"></i> Memeriksa...';
+                }
+
+                fetch(`{{ route('students.lookup') }}?nim=${encodeURIComponent(nim)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        const student = data.data;
+
+                        // 1. Isi nama lengkap
+                        nameInput.value = student.name || '';
+                        nameInput.style.backgroundColor = '#ecfdf5';
+                        setTimeout(() => { nameInput.style.backgroundColor = ''; }, 1800);
+
+                        // 2. Otomatis pilih Fakultas dan Jurusan / Prodi
+                        const targetFaculty = student.faculty || (student.department && departmentFacultyMap[student.department] ? departmentFacultyMap[student.department] : null);
+                        const targetDept = student.department;
+
+                        if (facultySelect && targetFaculty) {
+                            for (let opt of facultySelect.options) {
+                                if (opt.value && (opt.value.toLowerCase() === targetFaculty.toLowerCase() || opt.textContent.toLowerCase().includes(targetFaculty.toLowerCase()))) {
+                                    facultySelect.value = opt.value;
+                                    // Trigger filter daftar jurusan sesuai fakultas
+                                    facultySelect.dispatchEvent(new Event('change'));
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (departmentSelect && targetDept && targetDept !== '-') {
+                            for (let opt of departmentSelect.options) {
+                                if (opt.value && (opt.value.toLowerCase() === targetDept.toLowerCase() || opt.value.toLowerCase().includes(targetDept.toLowerCase()) || targetDept.toLowerCase().includes(opt.value.toLowerCase()))) {
+                                    departmentSelect.value = opt.value;
+                                    departmentSelect.dispatchEvent(new Event('change'));
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Sorot visual pada dropdown Fakultas & Jurusan
+                        if (facultySelect && facultySelect.value) {
+                            facultySelect.style.backgroundColor = '#ecfdf5';
+                            setTimeout(() => { facultySelect.style.backgroundColor = ''; }, 1800);
+                        }
+                        if (departmentSelect && departmentSelect.value) {
+                            departmentSelect.style.backgroundColor = '#ecfdf5';
+                            setTimeout(() => { departmentSelect.style.backgroundColor = ''; }, 1800);
+                        }
+
+                        // 3. Otomatis isi Semester Terlapor
+                        const semesterInput = document.getElementById('reportedSemesterInput');
+                        if (semesterInput && student.semester) {
+                            semesterInput.value = student.semester;
+                            semesterInput.style.backgroundColor = '#ecfdf5';
+                            setTimeout(() => { semesterInput.style.backgroundColor = ''; }, 1800);
+                        }
+
+                        const sourceLabel = data.source === 'bridge_api' ? 'Bridge API' : 'Basis Data';
+                        if (nimBadge) {
+                            nimBadge.style.display = 'inline-block';
+                            nimBadge.className = 'badge badge-success text-white px-2 py-1';
+                            nimBadge.innerHTML = `<i class="fas fa-check-circle mr-1"></i> Terdata (${sourceLabel})`;
+                        }
+                        if (nimHelper) {
+                            const semInfo = student.semester ? ` (Semester ${student.semester})` : '';
+                            nimHelper.innerHTML = `<span class="text-success font-weight-bold"><i class="fas fa-check-circle mr-1"></i> Ditemukan: ${student.name} ${student.department ? '— ' + student.department : ''}${semInfo}</span>`;
+                        }
+                    } else {
+                        if (nimBadge) {
+                            nimBadge.style.display = 'inline-block';
+                            nimBadge.className = 'badge badge-warning text-dark px-2 py-1';
+                            nimBadge.innerHTML = '<i class="fas fa-info-circle mr-1"></i> Belum Terdata';
+                        }
+                        if (nimHelper) {
+                            nimHelper.innerHTML = '<span class="text-muted"><i class="fas fa-info-circle mr-1"></i> NIM belum terdata di sistem/API. Silakan isi nama secara manual.</span>';
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Error lookup NIM:', err);
+                    if (nimBadge) {
+                        nimBadge.style.display = 'inline-block';
+                        nimBadge.className = 'badge badge-secondary text-white px-2 py-1';
+                        nimBadge.innerHTML = '<i class="fas fa-times-circle mr-1"></i> Gagal Memeriksa';
+                    }
+                })
+                .finally(() => {
+                    if (btnSearchIcon) btnSearchIcon.className = 'fas fa-search mr-1';
+                    if (btnSearchText) btnSearchText.textContent = 'Cari';
+                    if (btnSearchNim) btnSearchNim.disabled = false;
+                });
+            }
+
+            if (nimInput) {
+                nimInput.addEventListener('input', function () {
+                    clearTimeout(debounceTimer);
+                    if (this.value.trim().length >= 4) {
+                        debounceTimer = setTimeout(() => performNimLookup(false), 500);
+                    } else {
+                        if (nimBadge) nimBadge.style.display = 'none';
+                        if (nimHelper) nimHelper.innerHTML = 'Ketik NIM pihak terlapor (nama akan terisi otomatis).';
+                    }
+                });
+
+                nimInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        clearTimeout(debounceTimer);
+                        performNimLookup(true);
+                    }
+                });
+            }
+
+            if (btnSearchNim) {
+                btnSearchNim.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    clearTimeout(debounceTimer);
+                    performNimLookup(true);
                 });
             }
         });

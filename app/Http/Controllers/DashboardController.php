@@ -17,7 +17,20 @@ class DashboardController extends Controller
             session([$key => $selected]);
         }
 
+        if ($selected !== 'all') {
+            $selected = $this->normalizeAcademicPeriod($selected);
+            session([$key => $selected]);
+        }
+
         return $selected;
+    }
+
+    private function normalizeAcademicPeriod(string $period): string
+    {
+        if (preg_match('/^(\d{4}\/\d{4})(?:\s+(Gasal|Genap))?$/u', $period, $matches)) {
+            return $matches[1] . ' ' . ($matches[2] ?? 'Gasal');
+        }
+        return $period;
     }
 
     private const VERIFIED_REPORT_STATUSES = [
@@ -88,7 +101,7 @@ class DashboardController extends Controller
         // 1. Academic Years setup
         $academicYears = AcademicYear::orderBy('year', 'desc')->get();
         if ($academicYears->isEmpty()) {
-            AcademicYear::create(['year' => '2026/2027', 'is_active' => true]);
+            AcademicYear::create(['year' => '2026/2027 Gasal', 'is_active' => true]);
             $academicYears = AcademicYear::orderBy('year', 'desc')->get();
         }
 
@@ -99,7 +112,7 @@ class DashboardController extends Controller
 
         // Suggested next academic year for the add-modal
         $latestYear = $academicYears->first()?->year ?? '2026/2027';
-        if (preg_match('/^(\d{4})\/(\d{4})$/', $latestYear, $matches)) {
+        if (preg_match('/^(\d{4})\/(\d{4})/', $latestYear, $matches)) {
             $y1 = (int)$matches[1] + 1;
             $y2 = (int)$matches[2] + 1;
             $suggestedNextYear = "{$y1}/{$y2}";
@@ -111,7 +124,8 @@ class DashboardController extends Controller
         $query = ViolationReport::query()->with(['student', 'reporter']);
 
         if ($selectedAcademicYear && $selectedAcademicYear !== 'all') {
-            $query->where('academic_year', $selectedAcademicYear);
+            [$year, $semester] = $this->splitAcademicPeriod($selectedAcademicYear);
+            $query->where('academic_year', $year)->where('semester', $semester);
         }
 
         $allReports = $query->orderBy('created_at', 'desc')->get();
@@ -180,7 +194,7 @@ class DashboardController extends Controller
 
         // 6. Inbox Cepat Laporan Menunggu Verifikasi
         $pendingReports = ViolationReport::whereIn('status', ['pending', 'dilaporkan'])
-            ->when($selectedAcademicYear !== 'all', fn($q) => $q->where('academic_year', $selectedAcademicYear))
+            ->when($selectedAcademicYear !== 'all', function ($q) use ($selectedAcademicYear) { [$year, $semester] = $this->splitAcademicPeriod($selectedAcademicYear); $q->where('academic_year', $year)->where('semester', $semester); })
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
@@ -216,17 +230,18 @@ class DashboardController extends Controller
                 'max:20',
                 'regex:/^\d{4}\/\d{4}$/',
             ],
+            'semester' => ['required', 'in:Gasal,Genap'],
         ], [
             'year.required' => 'Tahun akademik wajib diisi.',
             'year.regex' => 'Format tahun akademik harus YYYY/YYYY (contoh: 2027/2028).',
         ]);
 
-        $year = trim($request->year);
-
-        preg_match('/^(\d{4})\/(\d{4})$/', $year, $parts);
-        if ((int) $parts[2] !== (int) $parts[1] + 1) {
+        $yearOnly = trim($request->year);
+        preg_match('/^(\d{4})\/(\d{4})$/', $yearOnly, $parts);
+        if (!isset($parts[1], $parts[2]) || (int) $parts[2] !== (int) $parts[1] + 1) {
             return back()->withErrors(['year' => 'Tahun kedua harus satu tahun setelah tahun pertama.'])->withInput();
         }
+        $year = $yearOnly . ' ' . $request->semester;
 
         AcademicYear::setActive($year);
 
@@ -238,17 +253,18 @@ class DashboardController extends Controller
     {
         $validated = $request->validate([
             'year' => ['required', 'string', 'max:20', 'regex:/^(\\d{4})\\/(\\d{4})$/', 'unique:academic_years,year,' . $academicYear->id],
+            'semester' => ['required', 'in:Gasal,Genap'],
         ], [
             'year.regex' => 'Format tahun akademik harus YYYY/YYYY (contoh: 2027/2028).',
             'year.unique' => 'Tahun akademik tersebut sudah terdaftar.',
         ]);
 
         preg_match('/^(\\d{4})\\/(\\d{4})$/', $validated['year'], $parts);
-        if ((int) $parts[2] !== (int) $parts[1] + 1) {
+        if (!isset($parts[1], $parts[2]) || (int) $parts[2] !== (int) $parts[1] + 1) {
             return back()->withErrors(['year' => 'Tahun kedua harus satu tahun setelah tahun pertama.'])->withInput();
         }
 
-        $academicYear->update(['year' => trim($validated['year'])]);
+        $academicYear->update(['year' => trim($validated['year']) . ' ' . $validated['semester']]);
 
         return redirect()->route('kemahasiswaan.dashboard', ['academic_year' => $academicYear->year])
             ->with('success', "Tahun Akademik {$academicYear->year} berhasil diperbarui.");
@@ -256,7 +272,8 @@ class DashboardController extends Controller
 
     public function destroyAcademicYear(AcademicYear $academicYear)
     {
-        if (ViolationReport::where('academic_year', $academicYear->year)->exists()) {
+        [$yearOnly, $semester] = $this->splitAcademicPeriod($academicYear->year);
+        if (ViolationReport::where('academic_year', $yearOnly)->where('semester', $semester)->exists()) {
             return back()->withErrors(['academic_year' => 'Tahun akademik tidak dapat dihapus karena masih digunakan oleh laporan.']);
         }
 
@@ -275,6 +292,15 @@ class DashboardController extends Controller
 
         return redirect()->route('kemahasiswaan.dashboard')
             ->with('success', "Tahun Akademik {$deletedYear} berhasil dihapus.");
+    }
+
+    private function splitAcademicPeriod(string $period): array
+    {
+        if (preg_match('/^(\d{4}\/\d{4})\s+(Gasal|Genap)$/u', $period, $matches)) {
+            return [$matches[1], $matches[2]];
+        }
+
+        return [$period, 'Gasal'];
     }
 
     /**

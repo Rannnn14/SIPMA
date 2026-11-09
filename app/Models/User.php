@@ -70,7 +70,20 @@ class User extends Authenticatable
             return 'Kemahasiswaan';
         }
 
-        return $name !== '' ? $name : 'Pengguna';
+        if ($name === '') {
+            if ($this->isKajur()) {
+                return 'Kajur ' . ($this->department ?? 'Jurusan');
+            }
+            if ($this->isWadek3()) {
+                return 'Wadek III ' . (\App\Http\Controllers\ReportController::facultyDisplayName($this->faculty));
+            }
+            if ($this->isDekan()) {
+                return 'Dekan ' . (\App\Http\Controllers\ReportController::facultyDisplayName($this->faculty));
+            }
+            return 'Pengguna';
+        }
+
+        return $name;
     }
 
     public function getRoleTitleAttribute(): string

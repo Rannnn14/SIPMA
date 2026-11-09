@@ -26,7 +26,17 @@ class AcademicYear extends Model
         }
 
         // Fallback or default
-        return '2026/2027';
+        return '2026/2027 Gasal';
+    }
+
+    public function getYearOnlyAttribute(): string
+    {
+        return preg_replace('/\\s+(Gasal|Genap)$/u', '', $this->year) ?: $this->year;
+    }
+
+    public function getSemesterNameAttribute(): string
+    {
+        return preg_match('/\\b(Genap)$/u', $this->year) ? 'Genap' : 'Gasal';
     }
 
     /**

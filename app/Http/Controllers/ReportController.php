@@ -11,14 +11,50 @@ use App\Models\ViolationType;
 use App\Models\ReportEvidence;
 use App\Models\Faculty;
 use App\Models\AcademicYear;
+use App\Models\User;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use ZipArchive;
 
 class ReportController extends Controller
 {
+    protected static ?array $facultyDisplayMap = null;
+
     public static function facultyDisplayName(?string $name): string
     {
-        return $name === 'Fakultas Syariah' ? 'FASYA' : ($name ?? '');
+        if (empty($name)) {
+            return '';
+        }
+
+        if (self::$facultyDisplayMap === null) {
+            if (\Illuminate\Support\Facades\Schema::hasTable('faculties')) {
+                self::$facultyDisplayMap = Faculty::pluck('short_name', 'name')->toArray();
+            } else {
+                self::$facultyDisplayMap = [
+                    'FAKULTAS ILMU TARBIYAH DAN KEGURUAN' => 'FITK',
+                    'FAKULTAS SYARIAH'                    => 'FS',
+                    'FAKULTAS USHULUDDIN DAN ADAB'        => 'FUA',
+                    'PASCASARJANA'                        => 'PASCA',
+                    'FAKULTAS EKONOMI DAN BISNIS ISLAM'   => 'FEBI',
+                    'FAKULTAS DAKWAH DAN KOMUNIKASI ISLAM'=> 'FDKI',
+                    'ILMU TARBIYAH DAN KEGURUAN'          => 'FITK',
+                    'SYARIAH'                             => 'FS',
+                    'USHULUDDIN DAN ADAB'                 => 'FUA',
+                    'EKONOMI DAN BISNIS ISLAM'            => 'FEBI',
+                    'DAKWAH DAN KOMUNIKASI ISLAM'         => 'FDKI',
+                    'Fakultas Syariah'                    => 'FS',
+                ];
+            }
+        }
+
+        $displayName = self::$facultyDisplayMap[$name] ?? $name;
+
+        return match (strtoupper(trim($displayName))) {
+            'FS' => 'FASYA',
+            'PASCA' => 'PASCA SARJANA',
+            default => $displayName,
+        };
     }
 
     // List of standard faculties and their departments
@@ -182,6 +218,7 @@ class ReportController extends Controller
 
     public function index(Request $request)
     {
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
 
         // Mahasiswa tidak memiliki akses ke riwayat laporan (hanya pelaporan)
@@ -194,6 +231,7 @@ class ReportController extends Controller
         }
 
         $selectedAcademicYear = session('selected_academic_year_' . $user->id, AcademicYear::getActiveYear());
+        $selectedAcademicYear = $this->normalizeAcademicPeriod($selectedAcademicYear);
 
         $query = ViolationReport::query()
             ->with(['student', 'reporter', 'verifier', 'handler'])
@@ -238,7 +276,8 @@ class ReportController extends Controller
         }
         // Semua halaman laporan mengikuti pilihan tahun akademik dari dashboard.
         if ($selectedAcademicYear !== 'all') {
-            $query->where('academic_year', $selectedAcademicYear);
+            [$year, $term] = $this->splitAcademicPeriod($selectedAcademicYear);
+            $query->where('academic_year', $year)->where('semester', $term);
         }
         if ($request->filled('search')) {
             $search = $request->search;
@@ -256,11 +295,24 @@ class ReportController extends Controller
         return view('reports.index', compact('reports', 'departments', 'selectedAcademicYear'));
     }
 
+    private function normalizeAcademicPeriod(string $period): string
+    {
+        return preg_match('/^(\d{4}\/\d{4})(?:\s+(Gasal|Genap))?$/u', $period, $m)
+            ? $m[1] . ' ' . ($m[2] ?? 'Gasal') : $period;
+    }
+
+    private function splitAcademicPeriod(string $period): array
+    {
+        return preg_match('/^(\d{4}\/\d{4})\s+(Gasal|Genap)$/u', $period, $m)
+            ? [$m[1], $m[2]] : [$period, 'Gasal'];
+    }
+
     /**
      * Inbox Verifikasi: Hanya menampilkan laporan masuk yang belum diverifikasi
      */
     public function inbox(Request $request)
     {
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
         if ($user->isMahasiswa()) {
             return redirect()->route('mahasiswa.dashboard');
@@ -321,6 +373,7 @@ class ReportController extends Controller
      */
     public function history(Request $request)
     {
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
         if ($user->isMahasiswa()) {
             return redirect()->route('mahasiswa.dashboard');
@@ -387,6 +440,7 @@ class ReportController extends Controller
 
     public function create()
     {
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
         if (!$user->isMahasiswa() && !$user->isKemahasiswaan() && !$user->isKajur()) {
             abort(403, 'Hanya Mahasiswa, Kemahasiswaan, dan Kajur yang dapat membuat laporan.');
@@ -402,7 +456,9 @@ class ReportController extends Controller
 
     public function store(Request $request)
     {
-        $isMahasiswa = Auth::user()->isMahasiswa();
+        /** @var User $user Authenticated routes resolve to the application's User model. */
+        $user = Auth::user();
+        $isMahasiswa = $user->isMahasiswa();
 
         // PHP menolak upload sebelum Laravel menjalankan validasi jika batas request terlalu kecil.
         // Berikan pesan yang jelas untuk kondisi tersebut dan error upload lain.
@@ -437,8 +493,27 @@ class ReportController extends Controller
             'severity'             => 'required|string|in:Ringan,Sedang,Berat',
             'chronology'           => 'required|string',
             'evidence'             => 'required|array|min:1|max:4',
-            // Video sering melebihi batas dokumen/foto dan perangkat menghasilkan format berbeda.
-            'evidence.*'           => 'required|file|mimes:pdf,jpg,jpeg,png,mp4,mov,m4v,webm,3gp|max:51200',
+            // Dokumen/foto dibatasi 10 MB; video dibatasi 50 MB.
+            'evidence.*'           => [
+                'required',
+                'file',
+                'mimes:pdf,jpg,jpeg,png,mp4,mov,m4v,webm,3gp',
+                function ($attribute, $file, $fail) {
+                    if (!$file instanceof \Illuminate\Http\UploadedFile) {
+                        return;
+                    }
+
+                    $extension = strtolower($file->getClientOriginalExtension());
+                    $isVideo = in_array($extension, ['mp4', 'mov', 'm4v', 'webm', '3gp'], true);
+                    $maxKilobytes = $isVideo ? 51200 : 10240;
+
+                    if ($file->getSize() > $maxKilobytes * 1024) {
+                        $fail($isVideo
+                            ? 'Ukuran video maksimal 50 MB.'
+                            : 'Ukuran dokumen atau foto maksimal 10 MB.');
+                    }
+                },
+            ],
         ];
 
         $request->validate($rules, [
@@ -456,7 +531,6 @@ class ReportController extends Controller
             'evidence.required'            => 'Berkas bukti pendukung wajib diunggah.',
             'evidence.max'                 => 'Maksimal 4 berkas bukti yang dapat diunggah.',
             'evidence.*.mimes'             => 'Berkas harus berformat PDF, JPG, PNG, MP4, MOV, M4V, WEBM, atau 3GP.',
-            'evidence.*.max'               => 'Ukuran setiap berkas maksimal 50 MB.',
         ]);
 
         $faculty = $departmentFacultyMap[$request->reported_department] ?? null;
@@ -505,8 +579,8 @@ class ReportController extends Controller
             'incident_location' => $request->incident_location,
             'chronology'        => $request->chronology,
             'status'            => 'pending',
-            'academic_year'     => $academicYear,
-            'semester'          => 'Ganjil',
+            'academic_year'     => preg_replace('/\\s+(Gasal|Genap)$/u', '', $academicYear),
+            'semester'          => preg_match('/\\b(Genap)$/u', $academicYear) ? 'Genap' : 'Gasal',
             'reported_semester' => $request->reported_semester, // Semester berupa angka
             'evidence_path'     => $evidencePath,
             'evidence_name'     => $evidenceName,
@@ -522,20 +596,21 @@ class ReportController extends Controller
             ]);
         }
 
-        if (Auth::user()->isMahasiswa()) {
+        if ($user->isMahasiswa()) {
             return redirect()->route('reports.create')->with('success', 'Laporan Anda berhasil dikirim ke Bagian Kemahasiswaan. Terima kasih atas partisipasi Anda.');
         }
 
-        if (Auth::user()->isKajur()) {
+        if ($user->isKajur()) {
             return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan untuk proses verifikasi.');
         }
 
         return redirect()->route('reports.index')->with('success', 'Laporan berhasil diajukan untuk proses verifikasi.');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         $report = ViolationReport::with(['student', 'reporter', 'verifier', 'handler', 'evidences'])->findOrFail($id);
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
 
         // RBAC Access Check
@@ -562,9 +637,10 @@ class ReportController extends Controller
         return view('reports.show', compact('report', 'departments', 'severities', 'sanctionOptions'));
     }
 
-    private function resolveEvidenceAndAuthorize($id, $evidenceId = null): array
+    private function resolveEvidenceAndAuthorize(int $id, ?int $evidenceId = null): array
     {
         $report = ViolationReport::with('evidences')->findOrFail($id);
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
 
         $evidence = $evidenceId
@@ -575,7 +651,9 @@ class ReportController extends Controller
         }
         $filePath = $evidence?->file_path ?? $report->evidence_path;
         $fileName = $evidence?->original_name ?? $report->evidence_name ?? 'Berkas Bukti';
-        $fileMimeType = $evidence?->mime_type ?? Storage::disk('public')->mimeType($filePath);
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+        $fileMimeType = $evidence?->mime_type ?? ($filePath ? $disk->mimeType($filePath) : null);
         if (!$filePath) {
             abort(404, 'Berkas bukti tidak ditemukan.');
         }
@@ -598,7 +676,7 @@ class ReportController extends Controller
         return [$report, $evidence, $filePath, $fileName, $fileMimeType];
     }
 
-    public function previewEvidence($id, $evidenceId = null)
+    public function previewEvidence(int $id, ?int $evidenceId = null)
     {
         [$report, $evidence, $filePath, $fileName, $fileMimeType] = $this->resolveEvidenceAndAuthorize($id, $evidenceId);
 
@@ -614,10 +692,11 @@ class ReportController extends Controller
         return view('reports.evidence-preview', compact('report', 'evidence', 'filePath', 'fileName', 'fileMimeType', 'isVideo', 'isImage', 'streamUrl'));
     }
 
-    public function streamEvidence(Request $request, $id, $evidenceId = null)
+    public function streamEvidence(Request $request, int $id, ?int $evidenceId = null)
     {
         [$report, $evidence, $filePath, $fileName, $fileMimeType] = $this->resolveEvidenceAndAuthorize($id, $evidenceId);
 
+        /** @var FilesystemAdapter $disk */
         $disk = Storage::disk('public');
         if (!$disk->exists($filePath)) {
             abort(404, 'Berkas fisik tidak ditemukan di server.');
@@ -644,8 +723,9 @@ class ReportController extends Controller
     }
 
     // Kemahasiswaan Action 1: Koreksi Data Pelanggar
-    public function updateData(Request $request, $id)
+    public function updateData(Request $request, int $id)
     {
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
         if (!$user->isKemahasiswaan()) {
             abort(403, 'Hanya Bagian Kemahasiswaan yang dapat mengoreksi data laporan.');
@@ -680,8 +760,9 @@ class ReportController extends Controller
     }
 
     // Kemahasiswaan Action 2: Setujui & Teruskan ke Kajur
-    public function approveAndForward(Request $request, $id)
+    public function approveAndForward(Request $request, int $id)
     {
+        /** @var User|null $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
         if (!$user->isKemahasiswaan()) {
             abort(403, 'Hanya Bagian Kemahasiswaan yang dapat menyetujui laporan.');
@@ -712,8 +793,9 @@ class ReportController extends Controller
     }
 
     // Kemahasiswaan Action 3: Tolak Laporan
-    public function reject(Request $request, $id)
+    public function reject(Request $request, int $id)
     {
+        /** @var User|null $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
         if (!$user->isKemahasiswaan()) {
             abort(403, 'Hanya Bagian Kemahasiswaan yang dapat menolak laporan.');
@@ -740,15 +822,20 @@ class ReportController extends Controller
         return back()->with('success', 'Laporan telah DITOLAK. Pelapor dapat membaca alasan penolakan pada status laporan.');
     }
 
-    // Export Excel / CSV: Khusus data riwayat yang sudah terverifikasi
+    // Export Excel: one worksheet per academic year and semester
     public function exportExcel(Request $request)
     {
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
         $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan', 'ditolak']);
 
-        $selectedAcademicYear = session('selected_academic_year_' . ($user?->id ?? ''), AcademicYear::getActiveYear());
+        $selectedAcademicYear = $this->normalizeAcademicPeriod((string) $request->query(
+            'academic_year',
+            session('selected_academic_year_' . ($user?->id ?? ''), AcademicYear::getActiveYear())
+        ));
         if ($selectedAcademicYear && $selectedAcademicYear !== 'all') {
-            $query->where('academic_year', $selectedAcademicYear);
+            [$year, $term] = $this->splitAcademicPeriod($selectedAcademicYear);
+            $query->where('academic_year', $year)->where('semester', $term);
         }
 
         if ($user && $user->isKajur()) {
@@ -770,22 +857,15 @@ class ReportController extends Controller
             });
         }
 
-        $reports = $query->orderBy('created_at', 'desc')->get();
+        $reports = $query->orderBy('academic_year')->orderBy('semester')->orderBy('created_at', 'desc')->get();
         $filenamePrefix = $user && $user->isKajur()
             ? 'data_laporan_' . \Illuminate\Support\Str::slug($user->department ?: 'jurusan')
             : 'rekap_laporan_terverifikasi';
-        $filename = $filenamePrefix . '_' . date('Ymd_His') . '.csv';
-
-        $headers = [
-            "Content-type"        => "text/csv; charset=UTF-8",
-            "Content-Disposition" => "attachment; filename=$filename",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
+        $filename = $filenamePrefix . '_' . date('Ymd_His') . '.xlsx';
 
         $columns = [
             'No. Laporan',
+            'Periode TA',
             'Tanggal Kejadian',
             'Nama Terlapor',
             'NIM',
@@ -795,14 +875,14 @@ class ReportController extends Controller
             'Status'
         ];
 
-        $callback = function() use ($reports, $columns) {
-            $file = fopen('php://output', 'w');
-            fputs($file, "\xEF\xBB\xBF"); // UTF-8 BOM
-            fputcsv($file, $columns);
-
-            foreach ($reports as $r) {
-                fputcsv($file, [
+        $groupedReports = $reports->groupBy(fn ($r) => ($r->academic_year ?: 'Tanpa TA') . ' ' . ($r->semester ?: 'Gasal'));
+        $sheets = [];
+        foreach ($groupedReports as $period => $periodReports) {
+            $rows = [$columns];
+            foreach ($periodReports as $r) {
+                $rows[] = [
                     $r->report_number,
+                    $r->academic_year . ' ' . ($r->semester ?: 'Gasal'),
                     $r->incident_date ? $r->incident_date->format('Y-m-d') : '-',
                     $r->student_name,
                     $r->student_nim,
@@ -810,23 +890,105 @@ class ReportController extends Controller
                     $r->reported_semester ? 'Semester ' . $r->reported_semester : '-',
                     $r->severity ?? 'Ringan',
                     $r->status_label,
-                ]);
+                ];
             }
-            fclose($file);
-        };
+            $sheets[] = ['name' => $period, 'rows' => $rows];
+        }
 
-        return response()->stream($callback, 200, $headers);
+        if (!$sheets) {
+            $sheets[] = ['name' => $selectedAcademicYear === 'all' ? 'Semua Periode' : $selectedAcademicYear, 'rows' => [$columns]];
+        }
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'sipma-export-');
+        if ($tempFile === false) {
+            abort(500, 'Gagal menyiapkan file ekspor.');
+        }
+        try {
+            $this->writeExcelWorkbook($tempFile, $sheets);
+            return response()->download($tempFile, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        } catch (\Throwable $exception) {
+            @unlink($tempFile);
+            throw $exception;
+        }
+    }
+
+    private function writeExcelWorkbook(string $path, array $sheets): void
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException('Gagal membuat workbook Excel.');
+        }
+
+        $escape = static fn ($value) => htmlspecialchars((string) $value, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+        $sheetNames = [];
+        foreach ($sheets as $index => $sheet) {
+            $baseName = preg_replace('/[\\\\\/\?\*\[\]:]/u', ' ', $sheet['name']) ?: 'Periode';
+            $baseName = mb_substr(trim($baseName), 0, 31) ?: 'Periode';
+            $name = $baseName;
+            $suffix = 2;
+            while (in_array(mb_strtolower($name), $sheetNames, true)) {
+                $tail = ' ' . $suffix++;
+                $name = mb_substr($baseName, 0, 31 - mb_strlen($tail)) . $tail;
+            }
+            $sheetNames[] = mb_strtolower($name);
+
+            $sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+            foreach ($sheet['rows'] as $rowIndex => $row) {
+                $excelRow = $rowIndex + 1;
+                $sheetXml .= '<row r="' . $excelRow . '">';
+                foreach ($row as $columnIndex => $value) {
+                    $column = '';
+                    for ($n = $columnIndex + 1; $n > 0; $n = intdiv($n - 1, 26)) {
+                        $column = chr(65 + (($n - 1) % 26)) . $column;
+                    }
+                    $cell = $column . $excelRow;
+                    $sheetXml .= '<c r="' . $cell . '" t="inlineStr"><is><t xml:space="preserve">'
+                        . $escape($value) . '</t></is></c>';
+                }
+                $sheetXml .= '</row>';
+            }
+            $sheetXml .= '</sheetData></worksheet>';
+            $zip->addFromString('xl/worksheets/sheet' . ($index + 1) . '.xml', $sheetXml);
+            $sheets[$index]['safe_name'] = $name;
+        }
+
+        $workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>';
+        $relations = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+        $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>';
+        foreach ($sheets as $index => $sheet) {
+            $id = $index + 1;
+            $workbook .= '<sheet name="' . $escape($sheet['safe_name']) . '" sheetId="' . $id . '" r:id="rId' . $id . '"/>';
+            $relations .= '<Relationship Id="rId' . $id . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' . $id . '.xml"/>';
+            $contentTypes .= '<Override PartName="/xl/worksheets/sheet' . $id . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+        }
+        $workbook .= '</sheets></workbook>';
+        $relations .= '</Relationships>';
+        $contentTypes .= '</Types>';
+
+        $zip->addFromString('[Content_Types].xml', $contentTypes);
+        $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+        $zip->addFromString('xl/workbook.xml', $workbook);
+        $zip->addFromString('xl/_rels/workbook.xml.rels', $relations);
+        $zip->close();
     }
 
     // Export PDF / Print View: Khusus data riwayat yang sudah terverifikasi
     public function exportPdf(Request $request)
     {
+        /** @var User $user Authenticated routes resolve to the application's User model. */
         $user = Auth::user();
         $query = ViolationReport::whereNotIn('status', ['pending', 'dilaporkan', 'ditolak']);
 
-        $selectedAcademicYear = session('selected_academic_year_' . ($user?->id ?? ''), AcademicYear::getActiveYear());
+        $selectedAcademicYear = $this->normalizeAcademicPeriod(session('selected_academic_year_' . ($user?->id ?? ''), AcademicYear::getActiveYear()));
         if ($selectedAcademicYear !== 'all') {
-            $query->where('academic_year', $selectedAcademicYear);
+            [$year, $term] = $this->splitAcademicPeriod($selectedAcademicYear);
+            $query->where('academic_year', $year)->where('semester', $term);
         }
 
         if ($user && $user->isKajur()) {

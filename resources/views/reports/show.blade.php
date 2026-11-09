@@ -535,7 +535,7 @@
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-sm btn-secondary font-weight-bold px-3 py-2" data-dismiss="modal" style="border-radius: 8px;">Batal</button>
                     <button type="submit" class="btn btn-sm btn-danger font-weight-bold px-3 py-2" style="border-radius: 8px;">
-                        <i class="fas fa-ban mr-1"></i> Konfirmasi Tolak Laporan
+                        <i class="fas fa-ban mr-1"></i> Konfirmasi
                     </button>
                 </div>
             </form>

@@ -63,7 +63,7 @@
             </a>
             @endif
             @if(auth()->user()->isKemahasiswaan() || auth()->user()->isKajur() || auth()->user()->isDekan() || auth()->user()->isWarek())
-            <a href="{{ route('reports.export.excel') }}" class="btn btn-success shadow-sm font-weight-bold mr-2 mobile-hide-export">
+            <a href="{{ route('reports.export.excel', ['academic_year' => $selectedAcademicYear]) }}" class="btn btn-success shadow-sm font-weight-bold mr-2 mobile-hide-export">
                 <i class="fas fa-file-excel mr-1"></i> Excel
             </a>
             <a href="{{ route('reports.export.pdf') }}" target="_blank" class="btn btn-outline-danger shadow-sm font-weight-bold">
@@ -256,4 +256,6 @@
         })();
     </script>
 </x-layout>
+
+
 

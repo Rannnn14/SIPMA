@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\StudentLookupController;
 
 // Root redirects to login
 Route::get('/', function () {
@@ -56,6 +57,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Reports routes
+    Route::get('/mahasiswa/cari-nim', [StudentLookupController::class, 'lookup'])->name('students.lookup');
     Route::get('/laporan', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/laporan/inbox', [ReportController::class, 'inbox'])->name('reports.inbox');
     Route::get('/laporan/riwayat', [ReportController::class, 'history'])->name('reports.history');
